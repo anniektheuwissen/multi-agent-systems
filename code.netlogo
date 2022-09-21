@@ -1,13 +1,55 @@
+globals [
+]
+
+turtles-own [identifier group]
+
+patches-own [wall]
+
+to setup
+  clear-all
+  resize-world -21 21 -21 21
+
+  create-room-one-room-two-exits
+
+  ;; create humans and place them on free space
+  ask n-of number-of-humans patches with [wall = 0] [
+    sprout 1 [
+      set color red
+      set shape "circle"
+      set size 0.6
+    ]
+  ]
+
+  reset-ticks
+end
+
+to create-room-one-room-two-exits
+  ;; placing the walls
+  ask patches with [(((pycor = min-pycor + 4) or (pycor = max-pycor - 4)) and ((min-pxcor + 3 < pxcor) and (pxcor < max-pxcor - 3))) or
+                    (((pxcor = min-pxcor + 4) or (pxcor = max-pxcor - 4)) and ((min-pycor + 3 < pycor) and (pycor < max-pycor - 3)))]  [
+    set pcolor white
+    set wall 1
+  ]
+
+  ;; placing two exits
+  ask patches at-points [[-17 0] [17 0]] [
+    set pcolor black
+    set wall 0
+  ]
+end
+
+to go
+end
 
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
+217
 10
-647
-448
+580
+374
 -1
 -1
-13.0
+8.26
 1
 10
 1
@@ -17,15 +59,64 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
+-21
+21
+-21
+21
 0
 0
 1
 ticks
 30.0
+
+SLIDER
+20
+28
+192
+61
+number-of-humans
+number-of-humans
+0
+100
+78.0
+1
+1
+NIL
+HORIZONTAL
+
+BUTTON
+24
+153
+87
+186
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+127
+154
+190
+187
+NIL
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
