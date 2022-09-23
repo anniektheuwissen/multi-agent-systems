@@ -3,22 +3,23 @@ globals [
 
 turtles-own [identifier group]
 
+
 patches-own [patch-type] ;; 0 = inside, 1 = outside, 2 = wall
 
 to setup
   clear-all
   resize-world -21 21 -21 21
 
+  ;;choose the room
+  if room = "1-room-2-exits" [create-room-one-room-two-exits]
+  if room = "1-room-1-exit" [create-room-one-room-one-exit]
 
-  if room == 1-room-2-exits [create-room-one-room-two-exits]
-  if room == 1-room-1-exit [create-room-one-room-one-exit]
-
-  ;; create humans and place them on free space
+  ;; create humans and place them on free space inside
   ask n-of number-of-humans patches with [patch-type = 0] [
     sprout 1 [
       set color red
       set shape "circle"
-      set size 0.6
+      set size 0.8
     ]
   ]
 
@@ -26,17 +27,19 @@ to setup
 end
 
 to create-room-one-room-two-exits
+  ;; first name all patches "outside"
   ask patches [
     set patch-type 1
-
  ]
 
+  ;; create the walls
   ask patches with [(((pycor = min-pycor + 4) or (pycor = max-pycor - 4)) and ((min-pxcor + 3 < pxcor) and (pxcor < max-pxcor - 3))) or
                     (((pxcor = min-pxcor + 4) or (pxcor = max-pxcor - 4)) and ((min-pycor + 3 < pycor) and (pycor < max-pycor - 3)))]  [
     set pcolor white
     set patch-type 2
   ]
 
+  ;; everything inside of the walls is "inside"
   ask patches with [(pxcor < max-pxcor - 4) and (pxcor > min-pxcor + 4) and (pycor < max-pycor - 4) and (pycor > min-pycor + 4)] [
     set patch-type 0
   ]
@@ -49,17 +52,19 @@ to create-room-one-room-two-exits
 end
 
 to create-room-one-room-one-exit
+  ;; first name all patches "outside"
   ask patches [
     set patch-type 1
-
  ]
 
+  ;; create the walls
   ask patches with [(((pycor = min-pycor + 4) or (pycor = max-pycor - 4)) and ((min-pxcor + 3 < pxcor) and (pxcor < max-pxcor - 3))) or
                     (((pxcor = min-pxcor + 4) or (pxcor = max-pxcor - 4)) and ((min-pycor + 3 < pycor) and (pycor < max-pycor - 3)))]  [
     set pcolor white
     set patch-type 2
   ]
 
+  ;; everything inside of the walls is "inside"
   ask patches with [(pxcor < max-pxcor - 4) and (pxcor > min-pxcor + 4) and (pycor < max-pycor - 4) and (pycor > min-pycor + 4)] [
     set patch-type 0
   ]
@@ -70,6 +75,8 @@ to create-room-one-room-one-exit
     set patch-type 0
   ]
 end
+
+
 
 to go
 end
