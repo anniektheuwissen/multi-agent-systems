@@ -10,8 +10,8 @@ to setup
   resize-world -21 21 -21 21
 
 
-  if room == 1-room-2-exits [create-room-one-room-two-exits]
-  if room == 1-room-1-exit [create-room-one-room-one-exit]
+  if room =- 1-room-2-exits [create-room-one-room-two-exits]
+  if room = 1-room-1-exit [create-room-one-room-one-exit]
 
   ;; create humans and place them on free space
   ask n-of number-of-humans patches with [patch-type = 0] [
