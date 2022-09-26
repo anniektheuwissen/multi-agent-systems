@@ -1,10 +1,13 @@
 globals [
 ]
 
-turtles-own [identifier group]
+turtles-own [
+  identifier group
+  message?
+]
 
 
-patches-own [patch-type] ;; 0 = inside, 1 = outside, 2 = wall
+patches-own [patch-type] ;; 0 = inside, 1 = outside, 2 = wall, 3 = exit
 
 to setup
   clear-all
@@ -20,8 +23,12 @@ to setup
       set color red
       set shape "circle"
       set size 0.8
+      set message? false
+      set heading (random 360)
     ]
   ]
+  ask one-of turtles [ set message? true ]   ;; give the message to one of the turtles
+  ask turtles [ recolor ]
 
   reset-ticks
 end
@@ -47,7 +54,7 @@ to create-room-one-room-two-exits
   ;; placing two exits
   ask patches at-points [[-17 0] [17 0]] [
     set pcolor black
-    set patch-type 0
+    set patch-type 3
   ]
 end
 
@@ -72,17 +79,72 @@ to create-room-one-room-one-exit
   ;; placing the exit
   ask patches at-points [[0 -17]] [
     set pcolor black
-    set patch-type 0
+    set patch-type 3
   ]
-end
-
-to add-obstacles
-  ask patches
 
 end
+
+
+
+;;;;;;;;;;;;;;;;;;;;;
+;;; Go procedures ;;;
+;;;;;;;;;;;;;;;;;;;;;
 
 to go
+  ask turtles [
+    ifelse leave-trace?             ;; the turtle puts its pen up or down depending on the
+      [ pen-down ]                  ;;   value of the LEAVE-TRACE? switch
+      [ pen-up ]
+    bounce
+    ifelse not any? turtles-on patch-ahead 2 [
+      fd 0.1
+    ]
+    [ set heading (random 360) ]
+    if any? patches in-radius 5 with [ patch-type = 3 ] [
+      face patch 0 -18
+    ]
+
+  ]
+  ask turtles [ bounce ]
+  ask turtles [ communicate ]
+  ask turtles [ recolor ]
+  ask turtles [ kill ]
+  tick
 end
+
+to kill
+  if [pxcor] of patch-ahead 0.1 = 0 and [pycor] of patch-ahead 0.1 = -16 [ die ]
+end
+
+;; this procedure checks the coordinates and makes the turtles
+;; reflect according to the law that the angle of reflection is
+;; equal to the angle of incidence
+to bounce  ;; turtle procedure
+  ; check: hitting left or right wall?
+  if abs [pxcor] of patch-ahead 0.1 = max-pxcor - 4
+    ; if so, reflect heading around x axis
+    [ set heading (- heading) ]
+  ; check: hitting top or bottom wall?
+  if abs [pycor] of patch-ahead 0.1 = max-pycor - 4
+    ; if so, reflect heading around y axis
+    [ set heading (180 - heading) ]
+end
+
+;; the core procedure!
+to communicate  ;; turtle procedure
+  if any? other turtles-here with [ message? ]
+    [ set message? true ]
+end
+
+; color turtles with message red, and those without message blue
+to recolor  ;; turtle procedure
+  ifelse message?
+    [ set color red ]
+    [ set color blue ]
+end
+
+
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 217
@@ -98,15 +160,15 @@ GRAPHICS-WINDOW
 1
 1
 0
-1
-1
+0
+0
 1
 -21
 21
 -21
 21
-0
-0
+1
+1
 1
 ticks
 30.0
@@ -150,7 +212,7 @@ BUTTON
 187
 NIL
 go
-NIL
+T
 1
 T
 OBSERVER
@@ -168,7 +230,18 @@ CHOOSER
 room
 room
 "1-room-1-exit" "1-room-2-exits"
+0
+
+SWITCH
+26
+225
+158
+258
+leave-trace?
+leave-trace?
 1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -512,7 +585,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.2.0
+NetLogo 6.2.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
