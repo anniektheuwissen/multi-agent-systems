@@ -1,20 +1,26 @@
+;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
+
 globals [
 ]
 
 turtles-own [
-  identifier group
+  identifier
+  group
+  behavior ;; 0 = individualistic, 1 = herding
 ]
 
 
-patches-own [patch-type] ;; 0 = inside, 1 = outside, 2 = wall, 3 = exit
+patches-own [patch-type] ;; 0 = room, 1 = hall, 2 = outside, 3 = wall, 4 = room door, 5 = main exit
 
 to setup
   clear-all
   resize-world -21 21 -21 21
 
   ;;choose the room
-  if room = "1-room-2-exits" [create-room-one-room-two-exits]
   if room = "1-room-1-exit" [create-room-one-room-one-exit]
+  if room = "2-rooms-1-exit" [create-room-two-rooms-one-exit]
+  if room = "triangular-object" [create-room-triangular-object]
+  if room = "cylindrical-objects" [create-room-cylindrical-objects]
 
   ;; create humans and place them on free space inside
   ask n-of number-of-humans patches with [patch-type = 0] [
@@ -22,63 +28,205 @@ to setup
       set color red
       set shape "circle"
       set size 0.8
+      set heading (random 360)
     ]
   ]
 
+  ;; all humans show herding behavior
+  ask turtles [
+    set behavior 0
+  ]
+
+  ;; depending on the percentage given by the input, individualistic turtles are created
+  ask n-of (count turtles / 100 * individualistic-percentage) turtles [
+    set behavior 1
+  ]
+
   reset-ticks
-end
-
-to create-room-one-room-two-exits
-  ;; first name all patches "outside"
-  ask patches [
-    set patch-type 1
- ]
-
-  ;; create the walls
-  ask patches with [(((pycor = min-pycor + 4) or (pycor = max-pycor - 4)) and ((min-pxcor + 3 < pxcor) and (pxcor < max-pxcor - 3))) or
-                    (((pxcor = min-pxcor + 4) or (pxcor = max-pxcor - 4)) and ((min-pycor + 3 < pycor) and (pycor < max-pycor - 3)))]  [
-    set pcolor white
-    set patch-type 2
-  ]
-
-  ;; everything inside of the walls is "inside"
-  ask patches with [(pxcor < max-pxcor - 4) and (pxcor > min-pxcor + 4) and (pycor < max-pycor - 4) and (pycor > min-pycor + 4)] [
-    set patch-type 0
-  ]
-
-  ;; placing two exits
-  ask patches at-points [[-17 0] [17 0]] [
-    set pcolor black
-    set patch-type 3
-  ]
 end
 
 to create-room-one-room-one-exit
   ;; first name all patches "outside"
   ask patches [
     set patch-type 1
- ]
-
-  ;; create the walls
-  ask patches with [(((pycor = min-pycor + 4) or (pycor = max-pycor - 4)) and ((min-pxcor + 3 < pxcor) and (pxcor < max-pxcor - 3))) or
-                    (((pxcor = min-pxcor + 4) or (pxcor = max-pxcor - 4)) and ((min-pycor + 3 < pycor) and (pycor < max-pycor - 3)))]  [
-    set pcolor white
-    set patch-type 2
   ]
 
-  ;; everything inside of the walls is "inside"
-  ask patches with [(pxcor < max-pxcor - 4) and (pxcor > min-pxcor + 4) and (pycor < max-pycor - 4) and (pycor > min-pycor + 4)] [
+  ;; create the walls
+  ask patches with [(((pycor = -13) or (pycor = 13)) and ((-14 < pxcor) and (pxcor < 14))) or
+                    (((pxcor = -13) or (pxcor = 13)) and ((-14 < pycor) and (pycor < 14)))]  [
+    set pcolor white
+    set patch-type 3
+  ]
+
+  ;; everything inside of the walls is "room"
+  ask patches with [(pxcor < 13) and (pxcor > -13) and (pycor < 13) and (pycor > -13)] [
     set patch-type 0
   ]
 
-  ;; placing the exit
-  ask patches at-points [[0 -17]] [
+  ;; placing the main exit
+  ask patches at-points [[0 -13]] [
     set pcolor black
-    set patch-type 3
+    set patch-type 5
   ]
 end
 
+to create-room-two-rooms-one-exit
+  ;; first name all patches "outside"
+  ask patches [
+    set patch-type 2
+  ]
+
+  ;; create the outside walls
+  ask patches with [(((pycor = -19) or (pycor = 19)) and ((-21 < pxcor) and (pxcor < 21))) or
+                    (((pxcor = -20) or (pxcor = 20)) and ((-20 < pycor) and (pycor < 20)))]  [
+    set pcolor white
+    set patch-type 3
+  ]
+
+  ;; first name all patches inside of the walls "room"
+  ask patches with [(pxcor < 20) and (pxcor > -20) and (pycor < 19) and (pycor > -19)] [
+    set patch-type 0
+  ]
+
+  ;; create the walls of the rooms
+  ask patches with [(((pxcor = -4) or (pxcor = 4)) and ((-20 < pycor) and (pycor < 20)))] [
+    set pcolor white
+    set patch-type 3
+  ]
+
+  ;; name all patches outside of the room walls, "hall"
+  ask patches with [(pxcor < 4) and (pxcor > -4) and (pycor < 19) and (pycor > -19)] [
+    set patch-type 1
+  ]
+
+  ;; placing the room doors
+  ask patches at-points [[4 0] [-4 0]] [
+    set pcolor black
+    set patch-type 4
+  ]
+
+  ;; placing the main exits
+  ask patches at-points [[0 -19]] [
+    set pcolor black
+    set patch-type 5
+  ]
+
+end
+
+to create-room-triangular-object
+  ;; first name all patches "outside"
+  ask patches [
+    set patch-type 1
+  ]
+
+  ;; create the walls
+  ask patches with [(((pycor = -13) or (pycor = 13)) and ((-14 < pxcor) and (pxcor < 14))) or
+                    (((pxcor = -13) or (pxcor = 13)) and ((-14 < pycor) and (pycor < 14)))]  [
+    set pcolor white
+    set patch-type 3
+  ]
+
+  ;; everything inside of the walls is "room"
+  ask patches with [(pxcor < 13) and (pxcor > -13) and (pycor < 13) and (pycor > -13)] [
+    set patch-type 0
+  ]
+
+  ;; placing the main exit
+  ask patches at-points [[0 -13]] [
+    set pcolor black
+    set patch-type 5
+  ]
+
+  ;; place the traingular object
+  ask patches at-points [[0 -8]] [
+    sprout 1 [
+      set color white
+      set shape "triangle"
+      set size 6
+      set patch-type 3
+    ]
+  ]
+
+  ;;THE TURTLES CAN STILL MOVE OVER THE TRIANGLE, I WILL TRY TO FIX THAT LATER
+
+end
+
+to create-room-cylindrical-objects
+  ;; first name all patches "outside"
+  ask patches [
+    set patch-type 1
+  ]
+
+  ;; create the walls
+  ask patches with [(((pycor = -13) or (pycor = 13)) and ((-14 < pxcor) and (pxcor < 14))) or
+                    (((pxcor = -13) or (pxcor = 13)) and ((-14 < pycor) and (pycor < 14)))]  [
+    set pcolor white
+    set patch-type 3
+  ]
+
+  ;; everything inside of the walls is "room"
+  ask patches with [(pxcor < 13) and (pxcor > -13) and (pycor < 13) and (pycor > -13)] [
+    set patch-type 0
+  ]
+
+  ;; placing the main exit
+  ask patches at-points [[0 -13]] [
+    set pcolor black
+    set patch-type 5
+  ]
+
+  ;; place the cylindrical objects
+  ask patches at-points [[-2.5 -8] [2.5 -8]] [
+    sprout 1 [
+      set color white
+      set shape "circle"
+      set size 4
+      set patch-type 3
+    ]
+  ]
+
+  ;;THE TURTLES CAN STILL MOVE OVER THE CYLINDERS, I WILL TRY TO FIX THAT LATER
+
+end
+
+
 to go
+  ask turtles [
+    if not (patch-type = 5) [bounce]
+
+    ifelse not any? turtles-on patch-ahead 2 [
+      fd 0.1
+      if [patch-type] of patch-ahead 0.1 = 5  and room = "1-room-1-exit" [
+        set heading 180
+        fd 0.1
+        set color green]
+    ]
+    [
+      set heading (random 360)
+    ]
+  ]
+  ;;ask turtles [ bounce ]
+  ask turtles [ kill ]
+  tick
+end
+
+to kill
+  if [pxcor] of patch-ahead 0.1 = min-pxcor or [pxcor] of patch-ahead 0.1 = max-pxcor or [pycor] of patch-ahead 0.1 = min-pycor or [pycor] of patch-ahead 0.1 = max-pycor [ die ]
+end
+
+
+;; this procedure checks the coordinates and makes the turtles
+;; reflect according to the law that the angle of reflection is
+;; equal to the angle of incidence
+to bounce  ;; turtle procedure
+  ; check: hitting left or right wall?
+  if abs [pxcor] of patch-ahead 0.1 = max-pxcor - 8
+    ; if so, reflect heading around x axis
+    [ set heading (- heading) ]
+  ; check: hitting top or bottom wall?
+  if abs [pycor] of patch-ahead 0.1 = max-pycor - 8
+    ; if so, reflect heading around y axis
+    [ set heading (180 - heading) ]
 end
 
 
@@ -149,7 +297,7 @@ CHOOSER
 126
 room
 room
-"1-room-1-exit" "1-room-2-exits"
+"1-room-1-exit" "2-rooms-1-exit" "triangular-object" "cylindrical-objects"
 0
 
 BUTTON
@@ -159,7 +307,7 @@ BUTTON
 186
 NIL
 go
-NIL
+T
 1
 T
 OBSERVER
@@ -168,6 +316,21 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+18
+207
+207
+240
+individualistic-percentage
+individualistic-percentage
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
