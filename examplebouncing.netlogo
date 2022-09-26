@@ -3,6 +3,7 @@ globals [
 
 turtles-own [
   identifier group
+  message?
 ]
 
 
@@ -22,8 +23,12 @@ to setup
       set color red
       set shape "circle"
       set size 0.8
+      set message? false
+      set heading (random 360)
     ]
   ]
+  ask one-of turtles [ set message? true ]   ;; give the message to one of the turtles
+  ask turtles [ recolor ]
 
   reset-ticks
 end
@@ -78,6 +83,65 @@ to create-room-one-room-one-exit
   ]
 
 end
+
+
+
+;;;;;;;;;;;;;;;;;;;;;
+;;; Go procedures ;;;
+;;;;;;;;;;;;;;;;;;;;;
+
+to go
+  ask turtles [
+    ifelse leave-trace?             ;; the turtle puts its pen up or down depending on the
+      [ pen-down ]                  ;;   value of the LEAVE-TRACE? switch
+      [ pen-up ]
+    bounce
+    ifelse not any? turtles-on patch-ahead 2 [
+      fd 0.1
+    ]
+    [ set heading (random 360) ]
+    if any? patches in-radius 15 with [ patch-type = 3 ] [
+      face patch 0 -18
+    ]
+  ]
+  ask turtles [ bounce ]
+  ask turtles [ communicate ]
+  ask turtles [ recolor ]
+  ask turtles [ kill ]
+  tick
+end
+
+to kill
+  if [pxcor] of patch-ahead 0.1 = 0 and [pycor] of patch-ahead 0.1 = -16 [ die ]
+end
+
+;; this procedure checks the coordinates and makes the turtles
+;; reflect according to the law that the angle of reflection is
+;; equal to the angle of incidence
+to bounce  ;; turtle procedure
+  ; check: hitting left or right wall?
+  if abs [pxcor] of patch-ahead 0.1 = max-pxcor - 4
+    ; if so, reflect heading around x axis
+    [ set heading (- heading) ]
+  ; check: hitting top or bottom wall?
+  if abs [pycor] of patch-ahead 0.1 = max-pycor - 4
+    ; if so, reflect heading around y axis
+    [ set heading (180 - heading) ]
+end
+
+;; the core procedure!
+to communicate  ;; turtle procedure
+  if any? other turtles-here with [ message? ]
+    [ set message? true ]
+end
+
+; color turtles with message red, and those without message blue
+to recolor  ;; turtle procedure
+  ifelse message?
+    [ set color red ]
+    [ set color blue ]
+end
+
 
 
 @#$#@#$#@
@@ -520,7 +584,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.2.0
+NetLogo 6.2.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
