@@ -194,7 +194,7 @@ to go
   ask turtles [
     if not (patch-type = 5) [bounce]
 
-    ifelse not any? turtles-on patch-ahead 2 [
+    ifelse not any? turtles-on patch-ahead 1 [
       fd 0.1
       if [patch-type] of patch-ahead 0.1 = 5  and room = "1-room-1-exit" [
         set heading 180
@@ -219,16 +219,9 @@ end
 ;; reflect according to the law that the angle of reflection is
 ;; equal to the angle of incidence
 to bounce  ;; turtle procedure
-  ; check: hitting left or right wall?
-  if abs [pxcor] of patch-ahead 0.1 = max-pxcor - 8
-    ; if so, reflect heading around x axis
-    [ set heading (- heading) ]
-  ; check: hitting top or bottom wall?
-  if abs [pycor] of patch-ahead 0.1 = max-pycor - 8
-    ; if so, reflect heading around y axis
-    [ set heading (180 - heading) ]
+  if [patch-type] of patch-ahead 0.1 = 3
+        [ set heading (heading - 180) ]
 end
-
 
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -326,7 +319,7 @@ individualistic-percentage
 individualistic-percentage
 0
 100
-50.0
+73.0
 1
 1
 NIL
