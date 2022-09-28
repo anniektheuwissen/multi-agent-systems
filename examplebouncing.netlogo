@@ -96,10 +96,10 @@ to go
       [ pen-down ]                  ;;   value of the LEAVE-TRACE? switch
       [ pen-up ]
     bounce
-    ifelse not any? turtles-on patch-ahead 2 [
+    ifelse not any? turtles-on patch-ahead 1.5 [
       fd 0.1
     ]
-    [ set heading (random 360) ]
+    [ set heading (heading + 10) ]
     if any? patches in-radius 15 with [ patch-type = 3 ] [
       face patch 0 -18
     ]
@@ -143,7 +143,6 @@ to recolor  ;; turtle procedure
 end
 
 
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 217
@@ -181,7 +180,7 @@ number-of-humans
 number-of-humans
 0
 100
-96.0
+100.0
 1
 1
 NIL

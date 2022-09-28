@@ -240,7 +240,7 @@ to go
         set heading 180
         fd 0.1
         set color green
-      die]
+      ]
 
     ]
     [ set heading (heading + 10) ]
