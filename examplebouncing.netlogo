@@ -91,6 +91,7 @@ end
 ;;;;;;;;;;;;;;;;;;;;;
 
 to go
+  show count turtles
   ask turtles [
     ifelse leave-trace?             ;; the turtle puts its pen up or down depending on the
       [ pen-down ]                  ;;   value of the LEAVE-TRACE? switch
@@ -98,9 +99,10 @@ to go
     bounce
     ifelse not any? turtles-on patch-ahead 1.5 [
       fd 0.1
+      panic
     ]
     [ set heading (heading + 10) ]
-    if any? patches in-radius 15 with [ patch-type = 3 ] [
+    if any? patches in-radius 10 with [ patch-type = 3 ] [
       face patch 0 -18
     ]
   ]
@@ -113,6 +115,12 @@ end
 
 to kill
   if [pxcor] of patch-ahead 0.1 = 0 and [pycor] of patch-ahead 0.1 = -16 [ die ]
+end
+
+to panic
+  if random 100 <= panic_slider [
+    set heading (random 360)
+  ]
 end
 
 ;; this procedure checks the coordinates and makes the turtles
@@ -141,7 +149,6 @@ to recolor  ;; turtle procedure
     [ set color red ]
     [ set color blue ]
 end
-
 
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -240,6 +247,21 @@ leave-trace?
 1
 1
 -1000
+
+SLIDER
+22
+293
+194
+326
+panic_slider
+panic_slider
+0
+20
+1.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
