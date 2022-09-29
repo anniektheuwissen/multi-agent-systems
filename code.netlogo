@@ -1,6 +1,7 @@
 ;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
 
 globals [
+  speed
 ]
 
 turtles-own [
@@ -15,6 +16,7 @@ patches-own [patch-type] ;; 0 = room, 1 = hall, 2 = outside, 3 = wall, 4 = room 
 to setup
   clear-all
   resize-world -21 21 -21 21
+  set speed (panic / 10)
 
   ;;choose the room
   if room = "1-room-1-exit" [create-room-one-room-one-exit]
@@ -190,63 +192,35 @@ to create-room-cylindrical-objects
 end
 
 
-;to go
-;  ask turtles [
-;;    if not (patch-type = 5) [bounce]
-;
-;    ifelse not any? turtles-on patch-ahead 1.5 [
-;      fd 0.1
-;      if [patch-type] of patch-ahead 0.1 = 5  and room = "1-room-1-exit" [
-;        set heading 180
-;        fd 0.1
-;        set color green]
-;    ]
-;    [
-;      set heading (heading + 10)
-;    ]
-;    if any? patches in-radius 5 with [ patch-type = 5 ] [
-;      face patch 0 -18
-;    ]
-;  ]
-;  ask turtles [ bounce ]
-;  ask turtles [ kill ]
-;  tick
-;end
-;
-;;to kill
-;;  if [pxcor] of patch-ahead 0.1 = min-pxcor or [pxcor] of patch-ahead 0.1 = max-pxcor or [pycor] of patch-ahead 0.1 = min-pycor or [pycor] of patch-ahead 0.1 = max-pycor [ die ]
-;;end
-;to kill
-;  if [pxcor] of patch-ahead 0.1 = 0 and [pycor] of patch-ahead 0.1 = -16 [ die ]
-;end
-
-
-;; this procedure checks the coordinates and makes the turtles
-;; reflect according to the law that the angle of reflection is
-;; equal to the angle of incidence
-;to bounce  ;; turtle procedure
-;  if [patch-type] of patch-ahead 0.1 = 3
-;        [ set heading (heading - 180) ]
-;end
-
-
-
+;;
+;; repeat speed[
+;; set next-patch min-one-of neighbors [[distance myself] of patch 0 -13]
+;; next-patch [ move-to next-patch ]]
 to go
+  set speed (panic / 10)
   ask turtles [
     bounce
-    ifelse not any? turtles-on patch-ahead 1.5 [
-      fd 0.1
-      if [patch-type] of patch-ahead 0.1 = 5  and room = "1-room-1-exit" [
-        set heading 180
-        fd 0.1
-        set color green
-      die]
+    ifelse patch-type = 0 [ ;; if still inside, do this
+      ifelse not any? turtles-on patch-ahead (1.5) [ ;; why 1.5? 0.8 seems more logical (size of agent away)
+        fd speed
+        if [patch-type] of patch-ahead speed = 5 and room = "1-room-1-exit" [ ; was 0.1
+          set heading 180
+          fd (speed + 0.1) ;; if not +0.1, it does not enter the exit
+          set color green
+        ]
 
+      ]
+      [ set heading (heading + 10)]
+      ;;use (heading + (-5 + random 10)) ] for new heading close to old heading, but this makes it perform worse
+
+      if any? patches in-radius 5 with [ patch-type = 5 ]  [
+        face patch 0 -18 ;; should be 0 -13, that is where exit is. But gives mistakes
+      ]
     ]
-    [ set heading (heading + 10) ]
-    if any? patches in-radius 5 with [ patch-type = 5 ] [
-      face patch 0 -18
+    [ ;; if outside, move towards edge of environment
+      fd speed
     ]
+
   ]
   ask turtles [ bounce ]
   ask turtles [ kill ]
@@ -254,21 +228,20 @@ to go
 end
 
 to kill
-  if [pxcor] of patch-ahead 0.1 = 0 and [pycor] of patch-ahead 0.1 = -16 [ die ]
+  if [pxcor] of patch-ahead (speed) = -21 or [pycor] of patch-ahead (speed) = -21 [ die ] ;; was 0.1 both
 end
 
 ;; this procedure checks the coordinates and makes the turtles
 ;; reflect according to the law that the angle of reflection is
 ;; equal to the angle of incidence
 to bounce  ;; turtle procedure
-  ; check: hitting left or right wall?
-  if abs [pxcor] of patch-ahead 0.1 = max-pxcor - 8
-    ; if so, reflect heading around x axis
-    [ set heading (- heading) ]
-  ; check: hitting top or bottom wall?
-  if abs [pycor] of patch-ahead 0.1 = max-pycor - 8
-    ; if so, reflect heading around y axis
-    [ set heading (180 - heading) ]
+   if abs [pxcor] of patch-ahead speed = max-pxcor - 8
+     ; if so, reflect heading around x axis
+     [ set heading (- heading) ]
+   ; check: hitting top or bottom wall?
+   if abs [pycor] of patch-ahead speed = max-pycor - 8
+     ; if so, reflect heading around y axis
+     [ set heading (180 - heading) ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -307,7 +280,7 @@ number-of-humans
 number-of-humans
 0
 100
-96.0
+95.0
 1
 1
 NIL
@@ -367,6 +340,21 @@ individualistic-percentage
 0
 100
 73.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+16
+250
+188
+283
+panic
+panic
+1
+10
+1.0
 1
 1
 NIL
@@ -714,7 +702,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.2.2
+NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
