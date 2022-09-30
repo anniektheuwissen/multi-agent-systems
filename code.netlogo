@@ -198,10 +198,10 @@ end
 ;; next-patch [ move-to next-patch ]]
 to go
   set speed (panic / 10)
-  ask turtles [
+  ask turtles with [size = 0.8] [
     bounce
     ifelse patch-type = 0 [ ;; if still inside, do this
-      ifelse not any? turtles-on patch-ahead (1.5) [ ;; why 1.5? 0.8 seems more logical (size of agent away)
+      ifelse not any? other turtles in-radius (0.8) [
         fd speed
         if [patch-type] of patch-ahead speed = 5 and room = "1-room-1-exit" [ ; was 0.1
           set heading 180
@@ -210,7 +210,8 @@ to go
         ]
 
       ]
-      [ set heading (heading + 10)]
+      [ set heading (heading + 10)
+        fd speed ]
       ;;use (heading + (-5 + random 10)) ] for new heading close to old heading, but this makes it perform worse
 
       if any? patches in-radius 5 with [ patch-type = 5 ]  [
@@ -222,8 +223,8 @@ to go
     ]
 
   ]
-  ask turtles [ bounce ]
-  ask turtles [ kill ]
+  ask turtles with [size = 0.8] [ bounce ]
+  ask turtles with [size = 0.8] [ kill ]
   tick
 end
 
@@ -311,7 +312,7 @@ CHOOSER
 room
 room
 "1-room-1-exit" "2-rooms-1-exit" "triangular-object" "cylindrical-objects"
-0
+2
 
 BUTTON
 105
