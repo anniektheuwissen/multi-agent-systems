@@ -8,6 +8,8 @@ turtles-own [
   identifier
   group
   behavior ;; 0 = individualistic, 1 = herding
+  visible-neighbours
+  closest-neighbour
 ]
 
 
@@ -19,12 +21,20 @@ to setup
   set speed (panic / 10)
 
   ;;choose the room
+  set-room
+  ;; create humans and place them on free space inside
+  set-humans
+  reset-ticks
+end
+
+to set-room
   if room = "1-room-1-exit" [create-room-one-room-one-exit]
   if room = "2-rooms-1-exit" [create-room-two-rooms-one-exit]
   if room = "triangular-object" [create-room-triangular-object]
   if room = "cylindrical-objects" [create-room-cylindrical-objects]
+end
 
-  ;; create humans and place them on free space inside
+to set-humans
   ask n-of number-of-humans patches with [patch-type = 0] [
     sprout 1 [
       set color red
@@ -33,7 +43,6 @@ to setup
       set heading (random 360)
     ]
   ]
-
   ;; all humans show herding behavior
   ask turtles [
     set behavior 0
@@ -43,8 +52,6 @@ to setup
   ask n-of (count turtles / 100 * individualistic-percentage) turtles [
     set behavior 1
   ]
-
-  reset-ticks
 end
 
 to create-room-one-room-one-exit
@@ -220,16 +227,10 @@ to go
 
       if patch-type = 0 [ ;; if still inside, do this
         ifelse [patch-type] of patch-ahead speed = 0 [ ;; if next patch also inside
-          ifelse not any? other turtles-on patch-ahead (speed)
-          and not any? other turtles-on patch-ahead (speed + 0.1)
-          and not any? other turtles-on patch-ahead (speed + 0.2)
-          and not any? other turtles-on patch-ahead (speed + 0.3)
-          and not any? other turtles-on patch-ahead (speed + 0.4)
-          and not any? other turtles-on patch-ahead (speed + 0.5)
-          and not any? other turtles-on patch-ahead (speed + 0.6)
-          and not any? other turtles-on patch-ahead (speed + 0.7)
-          and not any? other turtles-on patch-ahead (speed + 0.8)[
-            fd speed
+          ifelse check-for-turtles [
+            ;; If the human has herding behavior it should look for other agents
+            ;;herd
+            fd speed ;;move
           ]
           [
             set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
@@ -241,7 +242,51 @@ to go
           ]
           [
             ;next patch is type 5 and thus an exit
-            if not any? other turtles-on patch-ahead (speed)
+            if check-for-turtles [
+              fd speed ;;move
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]
+  if not any? turtles [ stop ]
+  tick
+end
+
+to move
+
+  ifelse [patch-type = 3] of patch-ahead 1
+  [
+    set heading (heading + (-5 + random 10))
+  ]
+  [
+    fd speed
+  ]
+end
+
+to herd
+  if behavior = 1 [
+    ;; set color blue
+    ;; Look for other turtles and change their heading to that of the other agent
+    set visible-neighbours (other turtles in-radius 3)
+    if any? visible-neighbours [ adjust-heading ]
+  ]
+end
+
+to adjust-heading
+  set closest-neighbour min-one-of visible-neighbours [distance myself]
+  face closest-neighbour
+end
+
+to kill
+  if [pxcor] of patch-ahead (speed) = -21 or [pycor] of patch-ahead (speed) = -21 [
+    die
+  ] ;; was 0.1 both
+end
+
+to-report check-for-turtles
+ ifelse not any? other turtles-on patch-ahead (speed)
             and not any? other turtles-on patch-ahead (speed + 0.1)
             and not any? other turtles-on patch-ahead (speed + 0.2)
             and not any? other turtles-on patch-ahead (speed + 0.3)
@@ -249,23 +294,13 @@ to go
             and not any? other turtles-on patch-ahead (speed + 0.5)
             and not any? other turtles-on patch-ahead (speed + 0.6)
             and not any? other turtles-on patch-ahead (speed + 0.7)
-            and not any? other turtles-on patch-ahead (speed + 0.8)[
-              fd speed
-            ]
-          ]
-        ]
-      ]
-    ]
+            and not any? other turtles-on patch-ahead (speed + 0.8)
+  [
+    report true
   ]
-
-  tick
-end
-
-
-to kill
-  if [pxcor] of patch-ahead (speed) = -21 or [pycor] of patch-ahead (speed) = -21 [
-    die
-  ] ;; was 0.1 both
+  [
+    report false
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -363,7 +398,7 @@ individualistic-percentage
 individualistic-percentage
 0
 100
-76.0
+51.0
 1
 1
 NIL
