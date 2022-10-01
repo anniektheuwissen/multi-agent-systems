@@ -257,7 +257,7 @@ to go
       ]
     ]
   ]
-  if not any? turtles [ stop ]
+
   tick
 end
 
