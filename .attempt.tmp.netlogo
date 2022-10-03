@@ -1,7 +1,7 @@
 ;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
 
 globals [
-  speed
+
 ]
 
 turtles-own [
@@ -212,7 +212,7 @@ to go
       if patch-type = 2 [ ;; turtle is outside
         ask turtles with [size = 0.8] [ kill ]
         ifelse not any? other turtles-on patch-ahead (speed) and [patch-type] of patch-ahead speed = 2 [
-          fd speed ;; move towards edge
+          fd 0.1 ;; move towards edge
         ]
         [
           set heading (heading + (-10 + random 20)) ;; avoid obstacle
@@ -221,7 +221,7 @@ to go
 
       if patch-type = 5 [ ;; turtle is in exit
         set heading 180
-        fd speed
+        fd 0.1
         set color green
       ]
 
@@ -230,7 +230,7 @@ to go
           ifelse check-for-turtles [
             ;; If the human has herding behavior it should look for other agents
             ;;herd
-            fd speed ;;move
+            fd 0.1 ;;move
           ]
           [
             set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
@@ -243,7 +243,7 @@ to go
           [
             ;next patch is type 5 and thus an exit
             if check-for-turtles [
-              fd speed ;;move
+              fd 0.1 ;;move
             ]
           ]
         ]
@@ -255,7 +255,7 @@ to go
 end
 
 to move
-
+  ;; Maybe instead of fd speed everywhere, create a method which also checks if the patch-ahead is not a wall
   ifelse [patch-type = 3] of patch-ahead 1
   [
     set heading (heading + (-5 + random 10))
@@ -280,7 +280,7 @@ to adjust-heading
 end
 
 to kill
-  if [pxcor] of patch-ahead (speed) = -21 or [pycor] of patch-ahead (speed) = -21 [
+  if [pxcor] of patch-ahead (0.1) = -21 or [pycor] of patch-ahead (0.1) = -21 [
     die
   ] ;; was 0.1 both
 end
@@ -425,7 +425,7 @@ PLOT
 212
 445
 population
-tick
+ticks
 population
 0.0
 10.0

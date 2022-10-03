@@ -1,7 +1,7 @@
 ;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
 
 globals [
-  speed
+
 ]
 
 turtles-own [
@@ -18,7 +18,6 @@ patches-own [patch-type] ;; 0 = room, 1 = hall, 2 = outside, 3 = wall, 4 = room 
 to setup
   clear-all
   resize-world -21 21 -21 21
-  set speed (panic / 10)
 
   ;;choose the room
   set-room
@@ -201,7 +200,6 @@ end
 
 ;;
 to go
-  set speed (panic / 10 )
   ask turtles with [size = 0.8] [
     if patch-type = 0 and any? patches in-radius 15 with [ patch-type = 5 ]  [
       face patch 0 -13
@@ -211,8 +209,8 @@ to go
     ask turtles with [size = 0.8] [
       if patch-type = 2 [ ;; turtle is outside
         ask turtles with [size = 0.8] [ kill ]
-        ifelse not any? other turtles-on patch-ahead (speed) and [patch-type] of patch-ahead speed = 2 [
-          fd speed ;; move towards edge
+        ifelse not any? other turtles-on patch-ahead (0.1) and [patch-type] of patch-ahead 0.1 = 2 [
+          fd 0.1 ;; move towards edge
         ]
         [
           set heading (heading + (-10 + random 20)) ;; avoid obstacle
@@ -221,29 +219,29 @@ to go
 
       if patch-type = 5 [ ;; turtle is in exit
         set heading 180
-        fd speed
+        fd 0.1
         set color green
       ]
 
       if patch-type = 0 [ ;; if still inside, do this
-        ifelse [patch-type] of patch-ahead speed = 0 [ ;; if next patch also inside
+        ifelse [patch-type] of patch-ahead 0.1 = 0 [ ;; if next patch also inside
           ifelse check-for-turtles [
             ;; If the human has herding behavior it should look for other agents
             ;;herd
-            fd speed ;;move
+            fd 0.1 ;;move
           ]
           [
             set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
           ]
         ]
         [
-          ifelse [patch-type] of patch-ahead speed = 3 [ ;; next patch is wall
+          ifelse [patch-type] of patch-ahead 0.1 = 3 [ ;; next patch is wall
             set heading (heading + (random 360)) ;; next patch wall, change direction
           ]
           [
             ;next patch is type 5 and thus an exit
             if check-for-turtles [
-              fd speed ;;move
+              fd 0.1 ;;move
             ]
           ]
         ]
@@ -255,13 +253,13 @@ to go
 end
 
 to move
-  ;; Maybe instead of fd speed everywhere, create a method which also checks if the patch-ahead is not a wall
+  ;; Maybe instead of fd 0.1 everywhere, create a method which also checks if the patch-ahead is not a wall
   ifelse [patch-type = 3] of patch-ahead 1
   [
     set heading (heading + (-5 + random 10))
   ]
   [
-    fd speed
+    fd 0.1
   ]
 end
 
@@ -280,21 +278,21 @@ to adjust-heading
 end
 
 to kill
-  if [pxcor] of patch-ahead (speed) = -21 or [pycor] of patch-ahead (speed) = -21 [
+  if [pxcor] of patch-ahead (0.1) = -21 or [pycor] of patch-ahead (0.1) = -21 [
     die
   ] ;; was 0.1 both
 end
 
 to-report check-for-turtles
- ifelse not any? other turtles-on patch-ahead (speed)
-            and not any? other turtles-on patch-ahead (speed + 0.1)
-            and not any? other turtles-on patch-ahead (speed + 0.2)
-            and not any? other turtles-on patch-ahead (speed + 0.3)
-            and not any? other turtles-on patch-ahead (speed + 0.4)
-            and not any? other turtles-on patch-ahead (speed + 0.5)
-            and not any? other turtles-on patch-ahead (speed + 0.6)
-            and not any? other turtles-on patch-ahead (speed + 0.7)
-            and not any? other turtles-on patch-ahead (speed + 0.8)
+ ifelse not any? other turtles-on patch-ahead (0.1)
+            and not any? other turtles-on patch-ahead (0.1 + 0.1)
+            and not any? other turtles-on patch-ahead (0.1 + 0.2)
+            and not any? other turtles-on patch-ahead (0.1 + 0.3)
+            and not any? other turtles-on patch-ahead (0.1 + 0.4)
+            and not any? other turtles-on patch-ahead (0.1 + 0.5)
+            and not any? other turtles-on patch-ahead (0.1 + 0.6)
+            and not any? other turtles-on patch-ahead (0.1 + 0.7)
+            and not any? other turtles-on patch-ahead (0.1 + 0.8)
   [
     report true
   ]
@@ -425,7 +423,7 @@ PLOT
 212
 445
 population
-tick
+ticks
 population
 0.0
 10.0
