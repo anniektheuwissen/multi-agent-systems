@@ -18,7 +18,6 @@ patches-own [patch-type] ;; 0 = room, 1 = hall, 2 = outside, 3 = wall, 4 = room 
 to setup
   clear-all
   resize-world -21 21 -21 21
-  set speed (panic / 10)
 
   ;;choose the room
   set-room
@@ -201,9 +200,8 @@ end
 
 ;;
 to go
-  set speed (panic / 10 )
   ask turtles with [size = 0.8] [
-    if patch-type = 0 and any? patches in-radius 15 with [ patch-type = 5 ]  [
+    if patch-type = 0 and any? patches in-radius 10 with [ patch-type = 5 ]  [
       face patch 0 -13
     ]
   ]
@@ -211,7 +209,7 @@ to go
     ask turtles with [size = 0.8] [
       if patch-type = 2 [ ;; turtle is outside
         ask turtles with [size = 0.8] [ kill ]
-        ifelse not any? other turtles-on patch-ahead (speed) and [patch-type] of patch-ahead speed = 2 [
+        ifelse not any? other turtles-on patch-ahead (0.1) and [patch-type] of patch-ahead 0.1 = 2 [
           fd 0.1 ;; move towards edge
         ]
         [
@@ -226,18 +224,32 @@ to go
       ]
 
       if patch-type = 0 [ ;; if still inside, do this
-        ifelse [patch-type] of patch-ahead speed = 0 [ ;; if next patch also inside
+        ;panic-function
+        ifelse [patch-type] of patch-ahead 0.1 = 0 [ ;; if next patch also inside
           ifelse check-for-turtles [
             ;; If the human has herding behavior it should look for other agents
             ;;herd
             fd 0.1 ;;move
           ]
           [
+            ifelse any? patches in-radius 100 with [ patch-type = 5 ] [ ; if close to exit, minimize distance
+              let better-patch patch-here
+              let dist distance (patch 0 -13)
+              ask neighbors [
+                if not any? turtles-here and distance (patch 0 -13) < dist [
+                  set better-patch (patch pxcor pycor)
+                  set dist distance (patch 0 -13)
+                ]
+              ]
+              set heading towards better-patch
+            ]
+            [
             set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
+            ]
           ]
         ]
         [
-          ifelse [patch-type] of patch-ahead speed = 3 [ ;; next patch is wall
+          ifelse [patch-type] of patch-ahead 0.1 = 3 [ ;; next patch is wall
             set heading (heading + (random 360)) ;; next patch wall, change direction
           ]
           [
@@ -255,13 +267,13 @@ to go
 end
 
 to move
-  ;; Maybe instead of fd speed everywhere, create a method which also checks if the patch-ahead is not a wall
+  ;; Maybe instead of fd 0.1 everywhere, create a method which also checks if the patch-ahead is not a wall
   ifelse [patch-type = 3] of patch-ahead 1
   [
     set heading (heading + (-5 + random 10))
   ]
   [
-    fd speed
+    fd 0.1
   ]
 end
 
@@ -285,16 +297,23 @@ to kill
   ] ;; was 0.1 both
 end
 
+to panic-function
+  if random 50 <= panic [
+    set heading (random 360)
+  ]
+end
+
+
 to-report check-for-turtles
- ifelse not any? other turtles-on patch-ahead (speed)
-            and not any? other turtles-on patch-ahead (speed + 0.1)
-            and not any? other turtles-on patch-ahead (speed + 0.2)
-            and not any? other turtles-on patch-ahead (speed + 0.3)
-            and not any? other turtles-on patch-ahead (speed + 0.4)
-            and not any? other turtles-on patch-ahead (speed + 0.5)
-            and not any? other turtles-on patch-ahead (speed + 0.6)
-            and not any? other turtles-on patch-ahead (speed + 0.7)
-            and not any? other turtles-on patch-ahead (speed + 0.8)
+ ifelse not any? other turtles-on patch-ahead (0.1)
+            and not any? other turtles-on patch-ahead (0.1 + 0.1)
+            and not any? other turtles-on patch-ahead (0.1 + 0.2)
+            and not any? other turtles-on patch-ahead (0.1 + 0.3)
+            and not any? other turtles-on patch-ahead (0.1 + 0.4)
+            and not any? other turtles-on patch-ahead (0.1 + 0.5)
+            and not any? other turtles-on patch-ahead (0.1 + 0.6)
+            and not any? other turtles-on patch-ahead (0.1 + 0.7)
+            and not any? other turtles-on patch-ahead (0.1 + 0.8)
   [
     report true
   ]
@@ -398,7 +417,7 @@ individualistic-percentage
 individualistic-percentage
 0
 100
-51.0
+0.0
 1
 1
 NIL
@@ -413,7 +432,7 @@ panic
 panic
 1
 10
-10.0
+6.0
 1
 1
 NIL
