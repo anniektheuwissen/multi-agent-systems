@@ -201,7 +201,7 @@ end
 ;;
 to go
   ask turtles with [size = 0.8] [
-    if patch-type = 0 and any? patches in-radius 100 with [ patch-type = 5 ]  [
+    if patch-type = 0 and any? patches in-radius 10 with [ patch-type = 5 ]  [
       face patch 0 -13
     ]
   ]
@@ -224,7 +224,7 @@ to go
       ]
 
       if patch-type = 0 [ ;; if still inside, do this
-        panic-function
+        ;panic-function
         ifelse [patch-type] of patch-ahead 0.1 = 0 [ ;; if next patch also inside
           ifelse check-for-turtles [
             ;; If the human has herding behavior it should look for other agents
@@ -232,7 +232,7 @@ to go
             fd 0.1 ;;move
           ]
           [
-            ifelse any? patches in-radius 15 with [ patch-type = 5 ] [ ; if close to exit, minimize distance
+            ifelse any? patches in-radius 100 with [ patch-type = 5 ] [ ; if close to exit, minimize distance
               let better-patch patch-here
               let dist distance (patch 0 -13)
               ask neighbors [
@@ -389,7 +389,7 @@ CHOOSER
 room
 room
 "1-room-1-exit" "2-rooms-1-exit" "triangular-object" "cylindrical-objects"
-0
+2
 
 BUTTON
 105
@@ -432,7 +432,7 @@ panic
 panic
 1
 10
-10.0
+6.0
 1
 1
 NIL
