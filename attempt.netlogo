@@ -12,7 +12,6 @@ turtles-own [
   closest-neighbour
 ]
 
-
 patches-own [patch-type] ;; 0 = room, 1 = hall, 2 = outside, 3 = wall, 4 = room door, 5 = main exit
 
 to setup
@@ -21,7 +20,7 @@ to setup
 
   ;;choose the room
   set-room
-  ;; create humans and place them on free space inside
+  ;; create humans
   set-humans
   reset-ticks
 end
@@ -34,6 +33,7 @@ to set-room
 end
 
 to set-humans
+  ;; place humans on free space that is inside
   ask n-of number-of-humans patches with [patch-type = 0] [
     sprout 1 [
       set color red
@@ -42,6 +42,7 @@ to set-humans
       set heading (random 360)
     ]
   ]
+
   ;; all humans show herding behavior
   ask turtles [
     set behavior 0
@@ -51,6 +52,7 @@ to set-humans
   ask n-of (count turtles / 100 * individualistic-percentage) turtles [
     set behavior 1
   ]
+
 end
 
 to create-room-one-room-one-exit
@@ -124,7 +126,7 @@ end
 to create-room-triangular-object
   ;; first name all patches "outside"
   ask patches [
-    set patch-type 1
+    set patch-type 2
   ]
 
   ;; create the walls
@@ -162,7 +164,7 @@ end
 to create-room-cylindrical-objects
   ;; first name all patches "outside"
   ask patches [
-    set patch-type 1
+    set patch-type 2
   ]
 
   ;; create the walls
@@ -183,7 +185,7 @@ to create-room-cylindrical-objects
     set patch-type 5
   ]
 
-  ;; place the cylindrical objects
+  ;; place the cylindrical objects and mark all patches that it covers "wall"
   ask patches at-points [[-2.5 -8] [2.5 -8]] [
     sprout 1 [
       set color white
@@ -192,23 +194,27 @@ to create-room-cylindrical-objects
       set patch-type 3
     ]
   ]
-
-  ;;THE TURTLES CAN STILL MOVE OVER THE CYLINDERS, I WILL TRY TO FIX THAT LATER
+  ask patches with [(distancexy -2.5 -8 < 2.5) or (distancexy 2.5 -8 < 2.5)] [
+    set patch-type 3
+  ]
 
 end
 
 
-;;
 to go
+  ;; if turtle is close to exit, head towards exit
   ask turtles with [size = 0.8] [
     if patch-type = 0 and any? patches in-radius 10 with [ patch-type = 5 ]  [
       face patch 0 -13
     ]
   ]
+
+  ;; let turtles move with specified desired speed/panic
   repeat (panic) [
     ask turtles with [size = 0.8] [
-      if patch-type = 2 [ ;; turtle is outside
-        ask turtles with [size = 0.8] [ kill ]
+      ;; if turtle is outside
+      if patch-type = 2 [
+        kill?
         ifelse not any? other turtles-on patch-ahead (0.1) and [patch-type] of patch-ahead 0.1 = 2 [
           fd 0.1 ;; move towards edge
         ]
@@ -217,13 +223,15 @@ to go
         ]
       ]
 
-      if patch-type = 5 [ ;; turtle is in exit
+      ;; if turtle is in exit
+      if patch-type = 5 [
         set heading 180
         fd 0.1
         set color green
       ]
 
-      if patch-type = 0 [ ;; if still inside, do this
+      ;; if turte is still inside
+      if patch-type = 0 [
         ;panic-function
         ifelse [patch-type] of patch-ahead 0.1 = 0 [ ;; if next patch also inside
           ifelse check-for-turtles [
@@ -232,11 +240,12 @@ to go
             fd 0.1 ;;move
           ]
           [
+            ;; head towards a better patch if close to exit
             ifelse any? patches in-radius 100 with [ patch-type = 5 ] [ ; if close to exit, minimize distance
               let better-patch patch-here
               let dist distance (patch 0 -13)
-              ask neighbors [
-                if not any? turtles-here and distance (patch 0 -13) < dist [
+              ask patches in-radius 3 [
+                if patch-type = 0 and not any? turtles-here and distance (patch 0 -13) < dist [
                   set better-patch (patch pxcor pycor)
                   set dist distance (patch 0 -13)
                 ]
@@ -244,13 +253,13 @@ to go
               set heading towards better-patch
             ]
             [
-            set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
+              set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
             ]
           ]
         ]
         [
-          ifelse [patch-type] of patch-ahead 0.1 = 3 [ ;; next patch is wall
-            set heading (heading + (random 360)) ;; next patch wall, change direction
+          ifelse [patch-type] of patch-ahead 0.1 = 3 [ ;; if next patch is wall
+            set heading (heading + (random 360)) ;; change direction
           ]
           [
             ;next patch is type 5 and thus an exit
@@ -262,6 +271,8 @@ to go
       ]
     ]
   ]
+
+  ;; if all turtles left room, stop
   if not any? turtles [ stop ]
   tick
 end
@@ -291,10 +302,10 @@ to adjust-heading
   face closest-neighbour
 end
 
-to kill
+to kill?
   if [pxcor] of patch-ahead (0.1) = -21 or [pycor] of patch-ahead (0.1) = -21 [
     die
-  ] ;; was 0.1 both
+  ]
 end
 
 to panic-function
@@ -302,7 +313,6 @@ to panic-function
     set heading (random 360)
   ]
 end
-
 
 to-report check-for-turtles
  ifelse not any? other turtles-on patch-ahead (0.1)
@@ -358,7 +368,7 @@ number-of-humans
 number-of-humans
 0
 100
-100.0
+62.0
 1
 1
 NIL
@@ -389,7 +399,7 @@ CHOOSER
 room
 room
 "1-room-1-exit" "2-rooms-1-exit" "triangular-object" "cylindrical-objects"
-2
+3
 
 BUTTON
 105
@@ -432,7 +442,7 @@ panic
 panic
 1
 10
-6.0
+8.0
 1
 1
 NIL
