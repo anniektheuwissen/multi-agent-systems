@@ -241,7 +241,7 @@ to go
           ]
           [
             ;; head towards a better patch if close to exit
-            ifelse any? patches in-radius radius-visible-door with [ patch-type = 5 ] [ ; if close to exit, minimize distance
+            ifelse any? patches in-radius  with [ patch-type = 5 ] [ ; if close to exit, minimize distance
               let better-patch patch-here
               let dist distance (patch 0 -13)
               ask patches in-radius 3 [
@@ -442,7 +442,7 @@ panic
 panic
 1
 10
-6.0
+2.0
 1
 1
 NIL
@@ -475,7 +475,7 @@ radius-visible-door
 radius-visible-door
 0
 30
-30.0
+2.0
 2
 1
 NIL
