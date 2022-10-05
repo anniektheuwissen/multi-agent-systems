@@ -5,14 +5,14 @@ globals [
 ]
 
 turtles-own [
-  identifier
   group
+  leader
   behavior ;; 0 = individualistic, 1 = herding
   visible-neighbours
   closest-neighbour
 ]
 
-patches-own [patch-type] ;; 0 = room, 1 = hall, 2 = outside, 3 = wall, 4 = room door, 5 = main exit
+patches-own [patch-type] ;; 0 = room, 1 = hall, 2 = outside, 3 = wall, 4 = room door, 5 = main exit, 6 = object
 
 to setup
   clear-all
@@ -34,12 +34,15 @@ end
 
 to set-humans
   ;; place humans on free space that is inside
+  let number-of-groups ceiling (number-of-humans / group-size)
   ask n-of number-of-humans patches with [patch-type = 0] [
     sprout 1 [
       set color red
       set shape "circle"
       set size 0.8
       set heading (random 360)
+      set group -1
+      set leader -1
     ]
   ]
 
@@ -53,6 +56,39 @@ to set-humans
     set behavior 1
   ]
 
+  ;; create groups
+  let i 0
+  while [any? turtles with [group = -1]] [
+    ask max-one-of turtles with [group = -1] [xcor + ycor] [
+      set group i
+      set leader 1
+      repeat (group-size - 1) [
+        if any? turtles with [group = -1] [
+          ask min-one-of turtles with [group = -1] [distance myself] [
+            set group i
+            set leader 0
+          ]
+        ]
+      ]
+      set i (i + 1)
+    ]
+  ]
+
+  form-groups
+  form-groups
+
+end
+
+;; let all turtles that are not a leader move to their group-leader
+to form-groups
+  ask turtles with [leader = 0] [
+    repeat(200) [
+      set heading towards one-of turtles with [group = [group] of myself and leader = 1]
+      if check-for-turtles [
+        fd 0.1
+      ]
+    ]
+  ]
 end
 
 to create-room-one-room-one-exit
@@ -191,11 +227,11 @@ to create-room-cylindrical-objects
       set color white
       set shape "circle"
       set size 4
-      set patch-type 3
+      set patch-type 6
     ]
   ]
   ask patches with [(distancexy -2.5 -8 < 2.5) or (distancexy 2.5 -8 < 2.5)] [
-    set patch-type 3
+    set patch-type 6
   ]
 
 end
@@ -228,6 +264,7 @@ to go
         set heading 180
         fd 0.1
         set color green
+        set group -1 ;; if turtle is outside, it should not influence the heading of the other groupmembers anymore
       ]
 
       ;; if turte is still inside
@@ -237,7 +274,18 @@ to go
           ifelse check-for-turtles [
             ;; If the human has herding behavior it should look for other agents
             ;;herd
-            fd 0.1 ;;move
+            ifelse distance (max-one-of turtles with [group = [group] of myself] [distance myself]) < (sqrt ((group-size * group-size) + (group-size * group-size))) [
+              fd 0.1 ;; move if all group members are close
+            ]
+            [
+              let max-dist distance (max-one-of turtles with [group = [group] of myself] [distance myself])
+              fd 0.1 ;; try moving
+              if distance (max-one-of turtles with [group = [group] of myself] [distance myself]) > max-dist [
+                set heading (heading + 180)
+                fd 0.1
+                set heading (heading - 180)
+              ]
+            ]
           ]
           [
             ;; head towards a better patch if close to exit
@@ -251,24 +299,64 @@ to go
                 ]
               ]
               set heading towards better-patch
+              if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
+                fd 0.1
+              ]
             ]
             [
               set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
+              if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
+                fd 0.1
+              ]
             ]
           ]
         ]
         [
           ifelse [patch-type] of patch-ahead 0.1 = 3 [ ;; if next patch is wall
             set heading (heading + (random 360)) ;; change direction
+            if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
+              fd 0.1
+            ]
           ]
           [
-            ;next patch is type 5 and thus an exit
-            if check-for-turtles [
-              fd 0.1 ;;move
+            ifelse [patch-type] of patch-ahead 0.1 = 6 [ ;; if next patch is object
+              let leftright (random 2)
+              ifelse leftright = 1 [
+                set heading (heading + 90)
+              ]
+              [
+                set heading (heading - 90)
+              ]
+            ]
+            [
+              ;next patch is type 5 and thus an exit
+              if check-for-turtles [
+                fd 0.1 ;;move
+              ]
             ]
           ]
         ]
       ]
+
+      ;; set heading of group the same
+      let i 0
+      repeat (group-size - 1) [
+
+        let groupheading 0
+        ask turtles with [group = i] [
+          set groupheading (groupheading + heading)
+        ]
+
+        set groupheading (groupheading / group-size)
+
+        ask turtles with [group = i] [
+          if not any? patches in-radius radius-visible-door with [ patch-type = 5 ] [
+            set heading groupheading
+          ]
+        ]
+        set i (i + 1)
+      ]
+
     ]
   ]
 
@@ -368,7 +456,7 @@ number-of-humans
 number-of-humans
 0
 100
-62.0
+19.0
 1
 1
 NIL
@@ -442,17 +530,17 @@ panic
 panic
 1
 10
-6.0
+1.0
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-604
-65
-804
-215
+8
+297
+208
+447
 population
 ticks
 population
@@ -467,16 +555,31 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles"
 
 SLIDER
-21
-303
-193
-336
+19
+530
+191
+563
 radius-visible-door
 radius-visible-door
 0
 30
 30.0
 2
+1
+NIL
+HORIZONTAL
+
+SLIDER
+21
+467
+193
+500
+group-size
+group-size
+0
+10
+5.0
+1
 1
 NIL
 HORIZONTAL
