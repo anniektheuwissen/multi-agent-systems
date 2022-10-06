@@ -356,7 +356,7 @@ end
 
 to move-if-group-is-close
   let moved 0
-  ifelse distance (max-one-of turtles with [group = [group] of myself] [distance myself]) < group-size  [
+  ifelse distance (max-one-of turtles with [group = [group] of myself] [distance myself]) < group-size [
     fd 0.1 ;; move if all group members are close
     set moved 1
   ]
@@ -541,7 +541,7 @@ panic
 panic
 1
 10
-7.0
+1.0
 1
 1
 NIL
@@ -587,9 +587,9 @@ SLIDER
 500
 group-size
 group-size
-0
+1
 10
-5.0
+1.0
 1
 1
 NIL
