@@ -242,14 +242,26 @@ to go
 
       ]
 
+;      ;; set heading of group the same
+;      let i 0
+;      repeat (group-size - 1) [
+;
+;        let groupheading 0
+;        ask turtles with [group = i] [
+;          set groupheading (groupheading + heading)
+;        ]
+;
+;        set groupheading (groupheading / group-size)
+;
+;        ask turtles with [group = i] [
+;          if not any? patches in-radius 30 with [ patch-type = 3 ] [
+;            set heading groupheading
+;          ]
+;        ]
+;        set i (i + 1)
+;      ]
       if groups[
-        let groupheading 0
-        let groupmembers 0
-        ask turtles with [group = [group] of myself] [
-          set groupheading (groupheading + heading)
-          set groupmembers (groupmembers + 1)
-        ]
-        set heading (groupheading / groupmembers)
+
       ]
     ]
   ]
@@ -456,7 +468,7 @@ SWITCH
 294
 groups
 groups
-0
+1
 1
 -1000
 
