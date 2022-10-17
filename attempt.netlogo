@@ -2,6 +2,7 @@
 
 turtles-own [
   group
+  group-size
   leader
   visible-neighbours
   closest-neighbour
@@ -28,7 +29,6 @@ end
 
 to set-humans
   ;; place humans on free space that is in the room
-  let number-of-groups ceiling (number-of-humans / group-size)
   ask n-of number-of-humans patches with [patch-type = 0] [
     sprout 1 [
       set color red
@@ -40,44 +40,51 @@ to set-humans
     ]
   ]
 
-  ;; create groups
-  let i 0
-  while [any? turtles with [group = -1]] [
-    ask max-one-of turtles with [group = -1] [xcor + ycor] [
-      set group i
-      set leader 1
-      repeat (group-size - 1) [
-        if any? turtles with [group = -1] [
-          ask min-one-of turtles with [group = -1] [distance myself] [
-            set group i
-            set leader 0
+  if groups [
+    ;; create groups
+    let i 0
+    let group-size-i ((mean-group-size - 2) + random 5)
+    while [any? turtles with [group = -1]] [
+      ask max-one-of turtles with [group = -1] [xcor + ycor] [
+        set group i
+        set group-size group-size-i
+        set leader 1
+
+        repeat (group-size-i - 1) [
+          if any? turtles with [group = -1] [
+            ask min-one-of turtles with [group = -1] [distance myself] [
+              set group i
+              set group-size group-size-i
+              set leader 0
+            ]
           ]
         ]
+        set i (i + 1)
+        set group-size-i ((mean-group-size - 2) + random 5)
+      ]
+    ]
+
+    ;; color groups
+    set i 0
+    while [i < 51] [
+      ask turtles with [group = i] [
+        set color (5 + i * 10)
       ]
       set i (i + 1)
     ]
-  ]
 
-  ;; color groups
-  set i 0
-  while [i < 51] [
-    ask turtles with [group = i] [
-      set color (5 + i * 10)
-    ]
-    set i (i + 1)
+    form-groups
   ]
-
-  form-groups
 
 
 end
 
 ;; let all turtles that are not a leader move to their group-leader
 to form-groups
-  ask turtles with [leader = 0] [
-    repeat(400) [
-      set heading towards one-of turtles with [group = [group] of myself and leader = 1]
-      if check-for-turtles [
+  ask turtles with [size = 0.8 and leader = 0] [
+    repeat(200) [
+      set heading towards (one-of turtles with [group = [group] of myself and leader = 1])
+      if check-for-turtles[
         fd 0.1
       ]
     ]
@@ -354,7 +361,7 @@ number-of-humans
 number-of-humans
 0
 100
-37.0
+100.0
 1
 1
 NIL
@@ -413,7 +420,7 @@ panic
 panic
 1
 10
-1.0
+8.0
 1
 1
 NIL
@@ -421,9 +428,9 @@ HORIZONTAL
 
 PLOT
 8
-321
+365
 208
-471
+515
 population
 ticks
 population
@@ -438,19 +445,30 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles"
 
 SLIDER
-20
-252
-192
-285
-group-size
-group-size
-1
-10
+18
+306
+190
+339
+mean-group-size
+mean-group-size
+3
+8
 8.0
 1
 1
 NIL
 HORIZONTAL
+
+SWITCH
+53
+261
+156
+294
+groups
+groups
+0
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
