@@ -74,6 +74,15 @@ to set-humans
     ]
   ]
 
+  ;; color groups
+  set i 0
+  while [i < 26] [
+    ask turtles with [group = i] [
+      set color (5 + i * 10)
+    ]
+    set i (i + 1)
+  ]
+
   form-groups
   form-groups
 
@@ -240,7 +249,7 @@ end
 to go
   ;; if turtle is close to exit, head towards exit
   ask turtles with [size = 0.8] [
-    if patch-type = 0 and any? patches in-radius radius-visible-door with [ patch-type = 5 ]  [
+    if patch-type = 0 and any? patches in-radius 30 with [ patch-type = 5 ]  [
       face patch 0 -13
     ]
   ]
@@ -278,7 +287,7 @@ to go
           ]
           [
             ;; head towards a better patch if close to exit
-            ifelse any? patches in-radius radius-visible-door with [ patch-type = 5 ] [ ; if close to exit, minimize distance
+            ifelse any? patches in-radius 30 with [ patch-type = 5 ] [ ; if close to exit, minimize distance
               let better-patch patch-here
               let dist distance (patch 0 -13)
               ask patches in-radius 3 [
@@ -287,16 +296,19 @@ to go
                   set dist distance (patch 0 -13)
                 ]
               ]
-              set heading towards better-patch
-              if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
-                move-if-group-is-close
+              if not (better-patch = patch-here) [
+                set heading towards better-patch
+                if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
+                  move-if-group-is-close
+                ]
               ]
             ]
             [
-              set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
-              if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
-                move-if-group-is-close
-              ]
+;              show "hi"
+;              set heading (heading + (-5 + random 10)) ;; next patch occupied, change direction
+;              if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
+;                move-if-group-is-close
+;              ]
             ]
           ]
         ]
@@ -325,6 +337,7 @@ to go
             ]
           ]
         ]
+
       ]
 
       ;; set heading of group the same
@@ -339,7 +352,7 @@ to go
         set groupheading (groupheading / group-size)
 
         ask turtles with [group = i] [
-          if not any? patches in-radius radius-visible-door with [ patch-type = 5 ] [
+          if not any? patches in-radius 30 with [ patch-type = 5 ] [
             set heading groupheading
           ]
         ]
@@ -355,24 +368,31 @@ to go
 end
 
 to move-if-group-is-close
-  let moved 0
-  ifelse distance (max-one-of turtles with [group = [group] of myself] [distance myself]) < group-size [
-    fd 0.1 ;; move if all group members are close
-    set moved 1
-  ]
-  [
-    let max-dist distance (max-one-of turtles with [group = [group] of myself] [distance myself])
-    fd 0.1 ;; try moving
-    set moved 1
-    if distance (max-one-of turtles with [group = [group] of myself] [distance myself]) > max-dist [
-      set heading (heading + 180)
-      fd 0.1
-      set heading (heading - 180)
-      set moved 0
+  ifelse ([patch-type] of patch-ahead 2 = 5)  [
+    ;; if the next patch is the patch before the exit, then only when the rest of the group is not too far away,
+    ;; try to move
+    let moved 0
+    ifelse distance (max-one-of turtles with [group = [group] of myself] [distance myself]) < (group-size) [
+      fd 0.1 ;; move if all group members are close
+      set moved 1
+    ]
+    [
+      let max-dist distance (max-one-of turtles with [group = [group] of myself] [distance myself])
+      fd 0.1 ;; try moving
+      set moved 1
+      if distance (max-one-of turtles with [group = [group] of myself] [distance myself]) > max-dist [
+        set heading (heading + 180)
+        fd 0.1
+        set heading (heading - 180)
+        set moved 0
+      ]
+    ]
+    if moved = 0 [
+      set heading (random 360)
     ]
   ]
-  if moved = 0 [
-    set heading (random 360)
+  [
+     fd 0.1
   ]
 end
 
@@ -467,7 +487,7 @@ number-of-humans
 number-of-humans
 0
 100
-30.0
+100.0
 1
 1
 NIL
@@ -541,7 +561,7 @@ panic
 panic
 1
 10
-1.0
+5.0
 1
 1
 NIL
@@ -566,21 +586,6 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles"
 
 SLIDER
-19
-530
-191
-563
-radius-visible-door
-radius-visible-door
-0
-30
-10.0
-2
-1
-NIL
-HORIZONTAL
-
-SLIDER
 21
 467
 193
@@ -589,7 +594,7 @@ group-size
 group-size
 1
 10
-1.0
+7.0
 1
 1
 NIL
