@@ -1,11 +1,11 @@
 ;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
+breed [objects object]
+breed [humans human]
 
-turtles-own [
+humans-own [
   group
   group-size
   leader
-  visible-neighbours
-  closest-neighbour
 ]
 
 patches-own [patch-type] ;; 0 = room, 1 = outside, 2 = wall, 3 = exit, 4 = object
@@ -30,7 +30,7 @@ end
 to set-humans
   ;; place humans on free space that is in the room
   ask n-of number-of-humans patches with [patch-type = 0] [
-    sprout 1 [
+    sprout-humans 1 [
       set color red
       set shape "circle"
       set size 0.8
@@ -44,15 +44,15 @@ to set-humans
     ;; create groups
     let i 0
     let group-size-i ((mean-group-size - 2) + random 5)
-    while [any? turtles with [group = -1]] [
-      ask max-one-of turtles with [group = -1] [xcor + ycor] [
+    while [any? humans with [group = -1]] [
+      ask max-one-of humans with [group = -1] [xcor + ycor] [
         set group i
         set group-size group-size-i
         set leader 1
 
         repeat (group-size-i - 1) [
-          if any? turtles with [group = -1] [
-            ask min-one-of turtles with [group = -1] [distance myself] [
+          if any? humans with [group = -1] [
+            ask min-one-of humans with [group = -1] [distance myself] [
               set group i
               set group-size group-size-i
               set leader 0
@@ -67,7 +67,7 @@ to set-humans
     ;; color groups
     set i 0
     while [i < 51] [
-      ask turtles with [group = i] [
+      ask humans with [group = i] [
         set color (5 + i * 10)
       ]
       set i (i + 1)
@@ -79,13 +79,32 @@ to set-humans
 
 end
 
-;; let all turtles that are not a leader move to their group-leader
+;; let all humans that are not a leader move to their group-leader
 to form-groups
-  ask turtles with [size = 0.8 and leader = 0] [
+  ask humans with [leader = 0] [
     repeat(200) [
-      set heading towards (one-of turtles with [group = [group] of myself and leader = 1])
-      if check-for-turtles[
-        fd 0.1
+      let humanleader (one-of humans with [group = [group] of myself and leader = 1])
+      set heading towards humanleader
+      if check-for-humans [
+        ifelse [patch-type] of patch-ahead 0.1 = 0 [
+          fd 0.1
+        ] [
+          ;; there is an object in the way, move to patch in radius 2 that is closest to leader that is not an object
+          let better-patch patch-here
+          let dist 100000
+          ask patches in-radius 2 [
+            if patch-type = 0 and not any? humans-here and distance humanleader < dist [
+              set better-patch (patch pxcor pycor)
+              set dist distance humanleader
+            ]
+          ]
+          ;; move to this patch
+          set heading towards better-patch
+          ;; only move if patch is free, if occupied wait in the queue
+          if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
+            fd 0.1
+          ]
+        ]
       ]
     ]
   ]
@@ -142,11 +161,10 @@ to create-room-cylindrical-objects
 
   ;; place the cylindrical objects and mark all patches that it covers "object"
   ask patches at-points [[-2.5 -8] [2.5 -8]] [
-    sprout 1 [
+    sprout-objects 1 [
       set color white
       set shape "circle"
       set size 4
-      set group -2
       set patch-type 4
     ]
   ]
@@ -159,20 +177,20 @@ end
 
 to go
   ;; head towards exit
-  ask turtles with [size = 0.8] [
+  ask humans [
     if patch-type = 0 [
       face patch 0 -13
     ]
   ]
 
-  ;; let turtles move with specified desired speed/panic
+  ;; let humans move with specified desired speed/panic
   repeat (panic) [
-    ask turtles with [size = 0.8] [
+    ask humans [
 
-      ;; if turtle is outside
+      ;; if human is outside
       if patch-type = 1 [
         kill?
-        ifelse not any? other turtles-on patch-ahead (0.1) and [patch-type] of patch-ahead 0.1 = 1 [
+        ifelse not any? other humans-on patch-ahead (0.1) and [patch-type] of patch-ahead 0.1 = 1 [
           fd 0.1 ;; move towards edge
         ]
         [
@@ -180,12 +198,12 @@ to go
         ]
       ]
 
-      ;; if turtle is in exit
+      ;; if human is in exit
       if patch-type = 3 [
         set heading 180
         fd 0.1
         set color green
-        set group -1 ;; if turtle is outside, it should not influence the heading of the other groupmembers anymore
+        set group -1 ;; if human is outside, it should not influence the heading of the other groupmembers anymore
       ]
 
       if patch-type = 4 [
@@ -193,7 +211,7 @@ to go
         let better-patch patch-here
         let dist 100000
         ask patches in-radius 2 [
-          if patch-type = 0 and not any? turtles-here and distance (patch 0 -13) < dist [
+          if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
             set better-patch (patch pxcor pycor)
             set dist distance (patch 0 -13)
           ]
@@ -201,7 +219,7 @@ to go
         ;; move to this patch
         set heading towards better-patch
         ;; only move if patchis free, if occupied wait in the queue
-        if check-for-turtles [
+        if check-for-humans [
           move-if-group-is-close
         ]
       ]
@@ -209,7 +227,7 @@ to go
       ;; if turte is still inside
       if patch-type = 0 [
         ifelse [patch-type] of patch-ahead 0.1 = 0 [ ;; if next patch also inside
-          ifelse check-for-turtles [
+          ifelse check-for-humans [
             move-if-group-is-close
           ]
           [
@@ -217,7 +235,7 @@ to go
             let better-patch patch-here
             let dist distance (patch 0 -13)
             ask patches in-radius 3 [
-              if patch-type = 0 and not any? turtles-here and distance (patch 0 -13) < dist [
+              if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
                 set better-patch (patch pxcor pycor)
                 set dist distance (patch 0 -13)
               ]
@@ -226,7 +244,7 @@ to go
             if not (better-patch = patch-here) [
               set heading towards better-patch
               ;; only move if patchis free, if occupied wait in the queue
-              if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
+              if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
                 move-if-group-is-close
               ]
             ]
@@ -235,7 +253,7 @@ to go
         [
           ifelse [patch-type] of patch-ahead 0.1 = 2 [ ;; if next patch is wall
             set heading (heading + (random 360)) ;; change direction
-            if check-for-turtles and [patch-type] of patch-ahead 0.1 = 0 [
+            if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
               move-if-group-is-close
             ]
           ]
@@ -245,7 +263,7 @@ to go
               let better-patch patch-here
               let dist 100000
               ask patches in-radius 2 [
-                if patch-type = 0 and not any? turtles-here and distance (patch 0 -13) < dist [
+                if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
                   set better-patch (patch pxcor pycor)
                   set dist distance (patch 0 -13)
                 ]
@@ -253,13 +271,13 @@ to go
               ;; move to this patch
               set heading towards better-patch
               ;; only move if patchis free, if occupied wait in the queue
-              if check-for-turtles [
+              if check-for-humans [
                 move-if-group-is-close
               ]
             ]
             [
               ;next patch is type 3 and thus an exit
-              if check-for-turtles [
+              if check-for-humans [
                 fd 0.1 ;;move
               ]
             ]
@@ -268,82 +286,76 @@ to go
 
       ]
 
-      if groups[
-        let groupheading 0
-        let groupmembers 0
-        ask turtles with [group = [group] of myself] [
-          set groupheading (groupheading + heading)
-          set groupmembers (groupmembers + 1)
-        ]
-        set heading (groupheading / groupmembers)
-      ]
+;      if groups[
+;        let groupheading 0
+;        let groupmembers 0
+;        ask humans with [group = [group] of myself] [
+;          set groupheading (groupheading + heading)
+;          set groupmembers (groupmembers + 1)
+;        ]
+;        set heading (groupheading / groupmembers)
+;      ]
     ]
   ]
 
-  ;; if all turtles left room, stop
-  if not any? turtles [ stop ]
+  ;; if all humans left room, stop
+  if not any? humans [ stop ]
   tick
 end
 
 to move-if-group-is-close
-  ifelse groups [
-    ifelse not (any? patches in-radius 4 with [patch-type = 3]) [
-      ;; if the next patch is not in the radius before the exit, then only when the rest of the group is not too far away,
-      ;; try to move
-      let moved 0
-      ifelse any? other turtles with [group = [group] of myself] [
-        ifelse distance (min-one-of other turtles with [group = [group] of myself] [distance myself]) < (2) [
-          fd 0.1 ;; move if all group members are close
-          set moved 1
-        ]
-        [
-          let save-heading heading
-          ;; move towards closest groupmember
-          set heading towards (min-one-of other turtles with [group = [group] of myself] [distance myself])
-          ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-turtles and not (any? patches in-radius 2 with [patch-type = 4])) [
-            set heading heading - 45 + (random 90)
-            if [patch-type] of patch-ahead 0.1 = 0 [
-              fd 0.1
-            ]
-          ]
-          [
-            set heading save-heading
-            fd 0.1
-          ]
-        ]
-      ]
-      [
-        fd 0.1
-      ]
+  ifelse groups and any? other humans with [group = [group] of myself]
+         and not (any? patches in-radius 4 with [patch-type = 3])
+         and not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6) [
+    let moved 0
+    ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [
+      fd 0.1 ;; move if all group members are close
+      set moved 1
     ]
     [
-      fd 0.1
+      let save-heading heading
+      ;; move towards closest groupmember
+      set heading towards (min-one-of other humans with [group = [group] of myself] [distance myself])
+      ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+        ;; if possible move
+        fd 0.1
+      ] [
+        ;; otherwise try to wiggle around the thing in front
+        set heading heading - 45 + (random 90)
+        ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+          fd 0.1
+        ] [
+          ;; otherwise just move away from your group!??
+          set heading save-heading
+          fd 0.1
+        ]
+      ]
     ]
-  ]
-  [
+  ] [
+    ;; if no groupmembers, or too close to exit, or in between 2 objects, human should go forward
     fd 0.1
   ]
 end
 
 
-;; turtles disappear when they reach the edge of the environment
+;; humans disappear when they reach the edge of the environment
 to kill?
   if [pxcor] of patch-ahead (0.1) = -21 or [pycor] of patch-ahead (0.1) = -21 [
     die
   ]
 end
 
-;; check if another turtle blocks the step of the current turtle based on its size
-to-report check-for-turtles
- ifelse not any? other turtles-on patch-ahead (0.1)
-            and not any? other turtles-on patch-ahead (0.1 + 0.1)
-            and not any? other turtles-on patch-ahead (0.1 + 0.2)
-            and not any? other turtles-on patch-ahead (0.1 + 0.3)
-            and not any? other turtles-on patch-ahead (0.1 + 0.4)
-            and not any? other turtles-on patch-ahead (0.1 + 0.5)
-            and not any? other turtles-on patch-ahead (0.1 + 0.6)
-            and not any? other turtles-on patch-ahead (0.1 + 0.7)
-            and not any? other turtles-on patch-ahead (0.1 + 0.8)
+;; check if another human blocks the step of the current human based on its size
+to-report check-for-humans
+ ifelse not any? other humans-on patch-ahead (0.1)
+            and not any? other humans-on patch-ahead (0.1 + 0.1)
+            and not any? other humans-on patch-ahead (0.1 + 0.2)
+            and not any? other humans-on patch-ahead (0.1 + 0.3)
+            and not any? other humans-on patch-ahead (0.1 + 0.4)
+            and not any? other humans-on patch-ahead (0.1 + 0.5)
+            and not any? other humans-on patch-ahead (0.1 + 0.6)
+            and not any? other humans-on patch-ahead (0.1 + 0.7)
+            and not any? other humans-on patch-ahead (0.1 + 0.8)
   [
     report true
   ]
@@ -388,7 +400,7 @@ number-of-humans
 number-of-humans
 0
 100
-90.0
+100.0
 1
 1
 NIL
@@ -480,7 +492,7 @@ mean-group-size
 mean-group-size
 3
 8
-7.0
+8.0
 1
 1
 NIL
