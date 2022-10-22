@@ -1,4 +1,6 @@
 ;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
+globals [number-of-groups]
+
 breed [objects object]
 breed [humans human]
 
@@ -47,21 +49,24 @@ to set-humans
     while [any? humans with [group = -1]] [
       ask max-one-of humans with [group = -1] [xcor + ycor] [
         set group i
-        set group-size group-size-i
         set leader 1
 
         repeat (group-size-i - 1) [
           if any? humans with [group = -1] [
             ask min-one-of humans with [group = -1] [distance myself] [
               set group i
-              set group-size group-size-i
               set leader 0
             ]
           ]
         ]
-        set i (i + 1)
-        set group-size-i ((mean-group-size - 2) + random 5)
       ]
+      set i (i + 1)
+      set group-size-i ((mean-group-size - 2) + random 5)
+    ]
+    set number-of-groups i
+    ;; humans have to save their group-size
+    ask humans [
+      set group-size (count (humans with [group = [group] of myself]))
     ]
 
     ;; color groups
@@ -74,6 +79,7 @@ to set-humans
     ]
 
     form-groups
+    form-groups
   ]
 
 
@@ -81,28 +87,19 @@ end
 
 ;; let all humans that are not a leader move to their group-leader
 to form-groups
-  ask humans with [leader = 0] [
-    repeat(200) [
-      let humanleader (one-of humans with [group = [group] of myself and leader = 1])
-      set heading towards humanleader
-      if check-for-humans [
-        ifelse [patch-type] of patch-ahead 0.1 = 0 [
-          fd 0.1
-        ] [
-          ;; there is an object in the way, move to patch in radius 2 that is closest to leader that is not an object
-          let better-patch patch-here
-          let dist 100000
-          ask patches in-radius 2 [
-            if patch-type = 0 and not any? humans-here and distance humanleader < dist [
-              set better-patch (patch pxcor pycor)
-              set dist distance humanleader
+  ask humans with [leader = 1] [
+    let groupleader self
+    repeat(group-size - 1) [
+      let empty-patches patches in-radius (group-size / 2) with [not any? turtles-here and patch-type = 0]
+      if any? empty-patches [
+        ask max-one-of humans with [group = [group] of myself and leader = 0] [distance myself] [
+          move-to (one-of empty-patches)
+          ;; to create a less structered view
+          set heading towards groupleader
+          repeat(200) [
+            if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
+              fd 0.1
             ]
-          ]
-          ;; move to this patch
-          set heading towards better-patch
-          ;; only move if patch is free, if occupied wait in the queue
-          if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
-            fd 0.1
           ]
         ]
       ]
@@ -176,17 +173,48 @@ end
 
 
 to go
-  ;; head towards exit
-  ask humans [
-    if patch-type = 0 [
-      face patch 0 -13
+  ;; let humans face the exit, or their groupmembers
+  ifelse groups [
+    ;; decide on new leader (the one closest to exit), and let the leader face the exit
+    ask humans with [group > -1] [
+      set leader 0
+    ]
+    let i 0
+    repeat (number-of-groups) [
+      if any? humans with [group = i] [
+        ask min-one-of humans with [group = i] [distance (patch 0 -13)] [
+          set leader 1
+          face patch 0 -13
+        ]
+      ]
+      set i (i + 1)
+    ]
+    ;; let rest of humans face their leader
+    ask humans with [leader = 0] [
+      ifelse (any? patches in-radius 3 with [patch-type = 3]) [
+        face patch 0 -13
+      ] [
+        let groupleader 0
+        ask one-of humans with [group = [group] of myself and leader = 1] [
+          set groupleader self
+        ]
+        if groupleader != 0 [
+          set heading towards groupleader
+        ]
+      ]
+    ]
+  ] [
+    ;; head towards exit
+    ask humans [
+      if patch-type = 0 [
+        face patch 0 -13
+      ]
     ]
   ]
 
   ;; let humans move with specified desired speed/panic
   repeat (panic) [
     ask humans [
-
       ;; if human is outside
       if patch-type = 1 [
         kill?
@@ -203,25 +231,13 @@ to go
         set heading 180
         fd 0.1
         set color green
-        set group -1 ;; if human is outside, it should not influence the heading of the other groupmembers anymore
+        ; if human is outside, it should not influence the other groupmembers anymore
+        set group -1
+        set leader -1
       ]
 
       if patch-type = 4 [
-        ;; find a patch in radius 1 that is no object and has shortest distance to exit
-        let better-patch patch-here
-        let dist 100000
-        ask patches in-radius 2 [
-          if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
-            set better-patch (patch pxcor pycor)
-            set dist distance (patch 0 -13)
-          ]
-        ]
-        ;; move to this patch
-        set heading towards better-patch
-        ;; only move if patchis free, if occupied wait in the queue
-        if check-for-humans [
-          move-if-group-is-close
-        ]
+        move-around-object
       ]
 
       ;; if turte is still inside
@@ -231,49 +247,19 @@ to go
             move-if-group-is-close
           ]
           [
-            ;; head towards a better patch
-            let better-patch patch-here
-            let dist distance (patch 0 -13)
-            ask patches in-radius 3 [
-              if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
-                set better-patch (patch pxcor pycor)
-                set dist distance (patch 0 -13)
-              ]
-            ]
-            ;; move to this patch if it is not the current patch
-            if not (better-patch = patch-here) [
-              set heading towards better-patch
-              ;; only move if patchis free, if occupied wait in the queue
-              if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
-                move-if-group-is-close
-              ]
-            ]
+            head-towards-better-patch-or-stay
           ]
         ]
         [
           ifelse [patch-type] of patch-ahead 0.1 = 2 [ ;; if next patch is wall
-            set heading (heading + (random 360)) ;; change direction
+            set heading heading + random 360
             if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
-              move-if-group-is-close
+              fd 0.1
             ]
           ]
           [
             ifelse [patch-type] of patch-ahead 0.1 = 4 [ ;; if next patch is object
-              ;; find a patch in radius 1 that is no object and has shortest distance to exit
-              let better-patch patch-here
-              let dist 100000
-              ask patches in-radius 2 [
-                if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
-                  set better-patch (patch pxcor pycor)
-                  set dist distance (patch 0 -13)
-                ]
-              ]
-              ;; move to this patch
-              set heading towards better-patch
-              ;; only move if patchis free, if occupied wait in the queue
-              if check-for-humans [
-                move-if-group-is-close
-              ]
+              move-around-object
             ]
             [
               ;next patch is type 3 and thus an exit
@@ -283,18 +269,7 @@ to go
             ]
           ]
         ]
-
       ]
-
-;      if groups[
-;        let groupheading 0
-;        let groupmembers 0
-;        ask humans with [group = [group] of myself] [
-;          set groupheading (groupheading + heading)
-;          set groupmembers (groupmembers + 1)
-;        ]
-;        set heading (groupheading / groupmembers)
-;      ]
     ]
   ]
 
@@ -303,10 +278,68 @@ to go
   tick
 end
 
+to head-towards-better-patch-or-stay
+  ;; head towards a better patch
+  let better-patch patch-here
+  let dist distance (patch 0 -13)
+  ask patches in-radius 2 [
+    if (patch-type = 0 or patch-type = 3) and not any? humans-here and distance (patch 0 -13) < dist [
+      set better-patch (patch pxcor pycor)
+      set dist distance (patch 0 -13)
+    ]
+  ]
+  if not (better-patch = patch-here) [
+    ;; move to this patch if it is not the current patch
+    set heading towards better-patch
+    ;; only move if patchis free, if occupied wait in the queue
+    if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0 or [patch-type] of patch-ahead 0.1 = 3) [
+      move-if-group-is-close
+    ]
+  ]
+end
+
+to head-towards-better-patch
+  ;; head towards a better patch
+  let better-patch patch-here
+  let dist 10000
+  ask patches in-radius 2 [
+    if (patch-type = 0 or patch-type = 3) and not any? humans-here and distance (patch 0 -13) < dist [
+      set better-patch (patch pxcor pycor)
+      set dist distance (patch 0 -13)
+    ]
+  ]
+  ;; move to this patch if it is not the current patch
+  set heading towards better-patch
+  ;; only move if patchis free, if occupied wait in the queue
+  if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0 or [patch-type] of patch-ahead 0.1 = 3) [
+    move-if-group-is-close
+  ]
+end
+
+to move-around-object
+  ;; find a patch in radius 2 that is no object and has shortest distance to exit
+  let better-patch patch-here
+  let dist 100000
+  ask patches in-radius 2 [
+    if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
+      set better-patch (patch pxcor pycor)
+      set dist distance (patch 0 -13)
+    ]
+  ]
+  ;; move to this patch
+  set heading towards better-patch
+  ;; only move if patchis free, if occupied wait in the queue
+  if check-for-humans [
+    ;; to prevent congestions, it does not have to wait for its group here
+    fd 0.1
+;    move-if-group-is-close
+  ]
+end
+
 to move-if-group-is-close
-  ifelse groups and any? other humans with [group = [group] of myself]
-         and not (any? patches in-radius 4 with [patch-type = 3])
-         and not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6) [
+  ifelse ((groups) and (any? other humans with [group = [group] of myself])
+         and (not (any? patches in-radius 4 with [patch-type = 3]))
+         and (not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6))) [
     let moved 0
     ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [
       fd 0.1 ;; move if all group members are close
@@ -314,9 +347,8 @@ to move-if-group-is-close
     ]
     [
       let save-heading heading
-      ;; move towards closest groupmember (but not straight)
+      ;; move towards closest groupmember
       set heading towards (min-one-of other humans with [group = [group] of myself] [distance myself])
-
       ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
         ;; if possible move
         fd 0.1
@@ -409,9 +441,9 @@ HORIZONTAL
 
 BUTTON
 24
-153
+152
 87
-186
+185
 NIL
 setup
 NIL
@@ -460,7 +492,7 @@ panic
 panic
 1
 10
-8.0
+10.0
 1
 1
 NIL
@@ -493,7 +525,7 @@ mean-group-size
 mean-group-size
 3
 8
-3.0
+5.0
 1
 1
 NIL
@@ -509,6 +541,23 @@ groups
 0
 1
 -1000
+
+BUTTON
+355
+426
+455
+459
+NIL
+form-groups\n
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
