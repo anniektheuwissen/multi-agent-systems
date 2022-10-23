@@ -1,4 +1,5 @@
 ;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
+;; all statements with why can be used to find what still needs to be described in the report
 globals [number-of-groups]
 
 breed [objects object]
@@ -282,7 +283,7 @@ to head-towards-better-patch-or-stay
   ;; head towards a better patch
   let better-patch patch-here
   let dist distance (patch 0 -13)
-  ask patches in-radius 2 [
+  ask patches in-radius 2 [ ;; 2 why
     if (patch-type = 0 or patch-type = 3) and not any? humans-here and distance (patch 0 -13) < dist [
       set better-patch (patch pxcor pycor)
       set dist distance (patch 0 -13)
@@ -291,18 +292,18 @@ to head-towards-better-patch-or-stay
   if not (better-patch = patch-here) [
     ;; move to this patch if it is not the current patch
     set heading towards better-patch
-    ;; only move if patchis free, if occupied wait in the queue
+    ;; only move if patch is free, if occupied wait in the queue
     if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0 or [patch-type] of patch-ahead 0.1 = 3) [
       move-if-group-is-close
     ]
   ]
 end
 
-to head-towards-better-patch
+to head-towards-better-patch ;; is this still used?
   ;; head towards a better patch
   let better-patch patch-here
   let dist 10000
-  ask patches in-radius 2 [
+  ask patches in-radius 2 [ ;; 2 why
     if (patch-type = 0 or patch-type = 3) and not any? humans-here and distance (patch 0 -13) < dist [
       set better-patch (patch pxcor pycor)
       set dist distance (patch 0 -13)
@@ -320,7 +321,7 @@ to move-around-object
   ;; find a patch in radius 2 that is no object and has shortest distance to exit
   let better-patch patch-here
   let dist 100000
-  ask patches in-radius 2 [
+  ask patches in-radius 2 [ ;; 2 why
     if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
       set better-patch (patch pxcor pycor)
       set dist distance (patch 0 -13)
@@ -338,11 +339,11 @@ end
 
 to move-if-group-is-close
   ifelse ((groups) and (any? other humans with [group = [group] of myself])
-         and (not (any? patches in-radius 4 with [patch-type = 3]))
+         and (not (any? patches in-radius 4 with [patch-type = 3])) ;; 4 why
          and (not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6))) [
     let moved 0
-    ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [
-      fd 0.1 ;; move if all group members are close
+    ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [ ;; 2.5 why
+      fd 0.1 ;; move if all group members are close ;; if one of group members is close
       set moved 1
     ]
     [
@@ -354,13 +355,14 @@ to move-if-group-is-close
         fd 0.1
       ] [
         ;; otherwise try to wiggle around the thing in front
-        set heading heading - 45 + (random 90)
+        set heading heading - 45 + (random 90) ;; 45 why
         ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
           fd 0.1
         ] [
           ;; otherwise just move away from your group!??
+          show "here"
           set heading save-heading
-          fd 0.1
+          ;fd 0.1 ;; maybe it should not always move? right now it always moves?
         ]
       ]
     ]
@@ -525,7 +527,7 @@ mean-group-size
 mean-group-size
 3
 8
-5.0
+8.0
 1
 1
 NIL
