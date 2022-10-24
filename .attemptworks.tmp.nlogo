@@ -359,8 +359,9 @@ to move-if-group-is-close
         ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
           fd 0.1
         ] [
-          ;; set heading back
+          ;;
           set heading save-heading
+          ;fd 0.1 ;; maybe it should not always move? right now it always moves?
         ]
       ]
     ]
