@@ -1,5 +1,4 @@
 ;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
-;; all statements with why can be used to find what still needs to be described in the report
 globals [number-of-groups]
 
 breed [objects object]
@@ -60,9 +59,9 @@ to set-humans
             ]
           ]
         ]
+        set i (i + 1)
+        set group-size-i ((mean-group-size - 2) + random 5)
       ]
-      set i (i + 1)
-      set group-size-i ((mean-group-size - 2) + random 5)
     ]
     set number-of-groups i
     ;; humans have to save their group-size
@@ -82,8 +81,6 @@ to set-humans
     form-groups
     form-groups
   ]
-
-
 end
 
 ;; let all humans that are not a leader move to their group-leader
@@ -232,7 +229,7 @@ to go
         set heading 180
         fd 0.1
         set color green
-        ; if human is outside, it should not influence the other groupmembers anymore
+        ;; if human is outside, it should not influence the heading of the other groupmembers anymore
         set group -1
         set leader -1
       ]
@@ -241,7 +238,7 @@ to go
         move-around-object
       ]
 
-      ;; if turte is still inside
+      ;; if human is still inside
       if patch-type = 0 [
         ifelse [patch-type] of patch-ahead 0.1 = 0 [ ;; if next patch also inside
           ifelse check-for-humans [
@@ -253,9 +250,9 @@ to go
         ]
         [
           ifelse [patch-type] of patch-ahead 0.1 = 2 [ ;; if next patch is wall
-            set heading heading + random 360
-            if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
-              fd 0.1
+            set heading (heading + (random 360)) ;; change direction
+            if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0 or [patch-type] of patch-ahead 0.1 = 3) [
+              move-if-group-is-close
             ]
           ]
           [
@@ -265,11 +262,12 @@ to go
             [
               ;next patch is type 3 and thus an exit
               if check-for-humans [
-                fd 0.1 ;;move
+                move-if-group-is-close
               ]
             ]
           ]
         ]
+
       ]
     ]
   ]
@@ -299,24 +297,6 @@ to head-towards-better-patch-or-stay
   ]
 end
 
-to head-towards-better-patch ;; is this still used?
-  ;; head towards a better patch
-  let better-patch patch-here
-  let dist 10000
-  ask patches in-radius 2 [ ;; 2 why
-    if (patch-type = 0 or patch-type = 3) and not any? humans-here and distance (patch 0 -13) < dist [
-      set better-patch (patch pxcor pycor)
-      set dist distance (patch 0 -13)
-    ]
-  ]
-  ;; move to this patch if it is not the current patch
-  set heading towards better-patch
-  ;; only move if patchis free, if occupied wait in the queue
-  if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0 or [patch-type] of patch-ahead 0.1 = 3) [
-    move-if-group-is-close
-  ]
-end
-
 to move-around-object
   ;; find a patch in radius 2 that is no object and has shortest distance to exit
   let better-patch patch-here
@@ -338,7 +318,7 @@ to move-around-object
 end
 
 to move-if-group-is-close
-  ifelse ((groups) and (any? other humans with [group = [group] of myself])
+    ifelse ((groups) and (any? other humans with [group = [group] of myself])
          and (not (any? patches in-radius 4 with [patch-type = 3])) ;; 4 why
          and (not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6))) [
     let moved 0
@@ -359,15 +339,51 @@ to move-if-group-is-close
         ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
           fd 0.1
         ] [
-          ;;
+          ;; set heading back
           set heading save-heading
-          ;fd 0.1 ;; maybe it should not always move? right now it always moves?
         ]
       ]
     ]
   ] [
     ;; if no groupmembers, or too close to exit, or in between 2 objects, human should go forward
-    fd 0.1
+    fd 0.
+  ]
+
+
+end
+
+to move-if-group-is-close2
+
+  ifelse ([patch-type] of patch-ahead 2 = 3)  [
+    ;; if the next patch is the patch before the exit, then only when the rest of the group is not too far away,
+    ;; try to move
+    let moved 0
+    ifelse distance (max-one-of humans with [group = [group] of myself] [distance myself]) < (group-size) [
+      fd 0.1 ;; move if all group members are close
+      set moved 1
+    ]
+    [
+      let save-heading heading
+      ;; move towards closest groupmember
+      set heading towards (min-one-of other humans with [group = [group] of myself] [distance myself])
+      ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+        ;; if possible move
+        fd 0.1
+      ] [
+        ;; otherwise try to wiggle around the thing in front
+        set heading heading - 45 + (random 90) ;; 45 why
+        ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+          fd 0.1
+        ] [
+          ;; set heading back and just move away from group
+          set heading save-heading
+          fd 0.1
+        ]
+      ]
+    ]
+  ]
+  [
+     fd 0.1
   ]
 end
 
@@ -493,7 +509,7 @@ panic
 panic
 1
 10
-10.0
+2.0
 1
 1
 NIL
@@ -526,7 +542,7 @@ mean-group-size
 mean-group-size
 3
 8
-3.0
+7.0
 1
 1
 NIL

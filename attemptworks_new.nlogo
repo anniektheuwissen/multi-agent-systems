@@ -238,7 +238,7 @@ to go
         move-around-object
       ]
 
-      ;; if turte is still inside
+      ;; if human is still inside
       if patch-type = 0 [
         ifelse [patch-type] of patch-ahead 0.1 = 0 [ ;; if next patch also inside
           ifelse check-for-humans [
@@ -251,7 +251,7 @@ to go
         [
           ifelse [patch-type] of patch-ahead 0.1 = 2 [ ;; if next patch is wall
             set heading (heading + (random 360)) ;; change direction
-            if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
+            if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0 or [patch-type] of patch-ahead 0.1 = 3) [
               move-if-group-is-close
             ]
           ]
@@ -262,7 +262,7 @@ to go
             [
               ;next patch is type 3 and thus an exit
               if check-for-humans [
-                fd 0.1 ;;move
+                move-if-group-is-close
               ]
             ]
           ]
@@ -318,6 +318,42 @@ to move-around-object
 end
 
 to move-if-group-is-close
+    ifelse ((groups) and (any? other humans with [group = [group] of myself])
+         and (not (any? patches in-radius 4 with [patch-type = 3])) ;; 4 why
+         and (not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6))) [
+    let moved 0
+    ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [ ;; 2.5 why
+      fd 0.1 ;; move if all group members are close ;; if one of group members is close
+      set moved 1
+    ]
+    [
+      let save-heading heading
+      ;; move towards closest groupmember
+      set heading towards (min-one-of other humans with [group = [group] of myself] [distance myself])
+      ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+        ;; if possible move
+        fd 0.1
+      ] [
+        ;; otherwise try to wiggle around the thing in front
+        set heading heading - 45 + (random 90) ;; 45 why
+        ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+          fd 0.1
+        ] [
+          ;; set heading back
+          set heading save-heading
+        ]
+      ]
+    ]
+  ] [
+    ;; if no groupmembers, or too close to exit, or in between 2 objects, human should go forward
+    fd 0.1
+  ]
+
+
+end
+
+to move-if-group-is-close2
+
   ifelse ([patch-type] of patch-ahead 2 = 3)  [
     ;; if the next patch is the patch before the exit, then only when the rest of the group is not too far away,
     ;; try to move
@@ -506,7 +542,7 @@ mean-group-size
 mean-group-size
 3
 8
-3.0
+7.0
 1
 1
 NIL
