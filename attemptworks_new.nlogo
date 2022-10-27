@@ -245,6 +245,21 @@ to go
             move-if-group-is-close
           ]
           [
+            let neighbor-group -1
+            ask humans-on patch-ahead 0.8  [
+              set neighbor-group group
+            ]
+            if (neighbor-group != group) [
+              set heading heading + 45
+              ifelse check-for-humans and ([patch-type] of patch-ahead 0.1 = 0) [
+                fd 0.1
+              ] [
+                set heading heading - 90
+                if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0) [
+                  fd 0.1
+                ]
+              ]
+            ]
             head-towards-better-patch-or-stay
           ]
         ]
@@ -321,10 +336,8 @@ to move-if-group-is-close
     ifelse ((groups) and (any? other humans with [group = [group] of myself])
          and (not (any? patches in-radius 4 with [patch-type = 3])) ;; 4 why
          and (not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6))) [
-    let moved 0
     ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [ ;; 2.5 why
       fd 0.1 ;; move if all group members are close ;; if one of group members is close
-      set moved 1
     ]
     [
       let save-heading heading
@@ -335,10 +348,15 @@ to move-if-group-is-close
         fd 0.1
       ] [
         ;; otherwise try to wiggle around the thing in front
-        set heading heading - 45 + (random 90) ;; 45 why
+        set heading heading + 45 ;; 45 why
+        if ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+          fd 0.1
+        ]
+        set heading heading - 90
         ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
           fd 0.1
-        ] [
+        ]
+        [
           ;; set heading back
           set heading save-heading
         ]
@@ -542,7 +560,7 @@ mean-group-size
 mean-group-size
 3
 8
-7.0
+3.0
 1
 1
 NIL
