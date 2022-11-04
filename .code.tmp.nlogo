@@ -1,4 +1,4 @@
-;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
+;; One patch represents 0.8 meter
 globals [number-of-groups]
 
 breed [objects object]
@@ -328,7 +328,6 @@ to move-around-object
   if check-for-humans [
     ;; to prevent congestions, it does not have to wait for its group here
     fd 0.1
-;    move-if-group-is-close
   ]
 end
 

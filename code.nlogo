@@ -1,50 +1,108 @@
-;; ONE PATCH REPRESENTS 0.8 METER, SO THE FACTOR TO MULTIPLY EACH SIZE WITH IS 1.25 TO GET THE SIZE IN NUMBER OF PATCHES
+;; One patch represents 0.8 meter
+globals [number-of-groups]
 
-globals [
-  speed
-]
+breed [objects object]
+breed [humans human]
 
-turtles-own [
-  identifier
+humans-own [
   group
-  behavior ;; 0 = individualistic, 1 = herding
+  group-size
+  leader
 ]
 
-
-patches-own [patch-type] ;; 0 = room, 1 = hall, 2 = outside, 3 = wall, 4 = room door, 5 = main exit
+patches-own [patch-type] ;; 0 = room, 1 = outside, 2 = wall, 3 = exit, 4 = object
 
 to setup
   clear-all
   resize-world -21 21 -21 21
-  set speed (panic / 10)
 
   ;;choose the room
-  if room = "1-room-1-exit" [create-room-one-room-one-exit]
-  if room = "2-rooms-1-exit" [create-room-two-rooms-one-exit]
-  if room = "triangular-object" [create-room-triangular-object]
-  if room = "cylindrical-objects" [create-room-cylindrical-objects]
+  set-room
+  ;; create humans
+  set-humans
 
-  ;; create humans and place them on free space inside
+  reset-ticks
+end
+
+to set-room
+  if room = "1-room-1-exit" [create-room-one-room-one-exit]
+  if room = "cylindrical-objects" [create-room-cylindrical-objects]
+end
+
+to set-humans
+  ;; place humans on free space that is in the room
   ask n-of number-of-humans patches with [patch-type = 0] [
-    sprout 1 [
+    sprout-humans 1 [
       set color red
       set shape "circle"
       set size 0.8
       set heading (random 360)
+      set group -1
+      set leader -1
     ]
   ]
 
-  ;; all humans show herding behavior
-  ask turtles [
-    set behavior 0
-  ]
+  if groups [
+    ;; create groups
+    let i 0
+    let group-size-i ((mean-group-size - 2) + random 5)
+    while [any? humans with [group = -1]] [
+      ask max-one-of humans with [group = -1] [xcor + ycor] [
+        set group i
+        set leader 1
 
-  ;; depending on the percentage given by the input, individualistic turtles are created
-  ask n-of (count turtles / 100 * individualistic-percentage) turtles [
-    set behavior 1
-  ]
+        repeat (group-size-i - 1) [
+          if any? humans with [group = -1] [
+            ask min-one-of humans with [group = -1] [distance myself] [
+              set group i
+              set leader 0
+            ]
+          ]
+        ]
+        set i (i + 1)
+        set group-size-i ((mean-group-size - 2) + random 5)
+      ]
+    ]
+    set number-of-groups i
+    ;; humans have to save their group-size
+    ask humans [
+      set group-size (count (humans with [group = [group] of myself]))
+    ]
 
-  reset-ticks
+    ;; color groups
+    set i 0
+    while [i < 51] [
+      ask humans with [group = i] [
+        set color (5 + i * 10)
+      ]
+      set i (i + 1)
+    ]
+
+    form-groups
+    form-groups
+  ]
+end
+
+;; let all humans that are not a leader move to their group-leader
+to form-groups
+  ask humans with [leader = 1] [
+    let groupleader self
+    repeat(group-size - 1) [
+      let empty-patches patches in-radius (group-size / 2) with [not any? turtles-here and patch-type = 0]
+      if any? empty-patches [
+        ask max-one-of humans with [group = [group] of myself and leader = 0] [distance myself] [
+          move-to (one-of empty-patches)
+          ;; to create a less structered view
+          set heading towards groupleader
+          repeat(200) [
+            if check-for-humans and [patch-type] of patch-ahead 0.1 = 0 [
+              fd 0.1
+            ]
+          ]
+        ]
+      ]
+    ]
+  ]
 end
 
 to create-room-one-room-one-exit
@@ -57,77 +115,9 @@ to create-room-one-room-one-exit
   ask patches with [(((pycor = -13) or (pycor = 13)) and ((-14 < pxcor) and (pxcor < 14))) or
                     (((pxcor = -13) or (pxcor = 13)) and ((-14 < pycor) and (pycor < 14)))]  [
     set pcolor white
-    set patch-type 3
-  ]
-
-  ;; everything inside of the walls is "room"
-  ask patches with [(pxcor < 13) and (pxcor > -13) and (pycor < 13) and (pycor > -13)] [
-    set patch-type 0
-  ]
-
-  ;; placing the main exit
-  ask patches at-points [[0 -13]] [
-    set pcolor black
-    set patch-type 5
-  ]
-end
-
-to create-room-two-rooms-one-exit
-  ;; first name all patches "outside"
-  ask patches [
     set patch-type 2
   ]
 
-  ;; create the outside walls
-  ask patches with [(((pycor = -19) or (pycor = 19)) and ((-21 < pxcor) and (pxcor < 21))) or
-                    (((pxcor = -20) or (pxcor = 20)) and ((-20 < pycor) and (pycor < 20)))]  [
-    set pcolor white
-    set patch-type 3
-  ]
-
-  ;; first name all patches inside of the walls "room"
-  ask patches with [(pxcor < 20) and (pxcor > -20) and (pycor < 19) and (pycor > -19)] [
-    set patch-type 0
-  ]
-
-  ;; create the walls of the rooms
-  ask patches with [(((pxcor = -4) or (pxcor = 4)) and ((-20 < pycor) and (pycor < 20)))] [
-    set pcolor white
-    set patch-type 3
-  ]
-
-  ;; name all patches outside of the room walls, "hall"
-  ask patches with [(pxcor < 4) and (pxcor > -4) and (pycor < 19) and (pycor > -19)] [
-    set patch-type 1
-  ]
-
-  ;; placing the room doors
-  ask patches at-points [[4 0] [-4 0]] [
-    set pcolor black
-    set patch-type 4
-  ]
-
-  ;; placing the main exits
-  ask patches at-points [[0 -19]] [
-    set pcolor black
-    set patch-type 5
-  ]
-
-end
-
-to create-room-triangular-object
-  ;; first name all patches "outside"
-  ask patches [
-    set patch-type 1
-  ]
-
-  ;; create the walls
-  ask patches with [(((pycor = -13) or (pycor = 13)) and ((-14 < pxcor) and (pxcor < 14))) or
-                    (((pxcor = -13) or (pxcor = 13)) and ((-14 < pycor) and (pycor < 14)))]  [
-    set pcolor white
-    set patch-type 3
-  ]
-
   ;; everything inside of the walls is "room"
   ask patches with [(pxcor < 13) and (pxcor > -13) and (pycor < 13) and (pycor > -13)] [
     set patch-type 0
@@ -136,21 +126,8 @@ to create-room-triangular-object
   ;; placing the main exit
   ask patches at-points [[0 -13]] [
     set pcolor black
-    set patch-type 5
+    set patch-type 3
   ]
-
-  ;; place the traingular object
-  ask patches at-points [[0 -8]] [
-    sprout 1 [
-      set color white
-      set shape "triangle"
-      set size 6
-      set patch-type 3
-    ]
-  ]
-
-  ;;THE TURTLES CAN STILL MOVE OVER THE TRIANGLE, I WILL TRY TO FIX THAT LATER
-
 end
 
 to create-room-cylindrical-objects
@@ -163,7 +140,7 @@ to create-room-cylindrical-objects
   ask patches with [(((pycor = -13) or (pycor = 13)) and ((-14 < pxcor) and (pxcor < 14))) or
                     (((pxcor = -13) or (pxcor = 13)) and ((-14 < pycor) and (pycor < 14)))]  [
     set pcolor white
-    set patch-type 3
+    set patch-type 2
   ]
 
   ;; everything inside of the walls is "room"
@@ -174,75 +151,284 @@ to create-room-cylindrical-objects
   ;; placing the main exit
   ask patches at-points [[0 -13]] [
     set pcolor black
-    set patch-type 5
+    set patch-type 3
   ]
 
-  ;; place the cylindrical objects
+  ;; place the cylindrical objects and mark all patches that it covers "object"
   ask patches at-points [[-2.5 -8] [2.5 -8]] [
-    sprout 1 [
+    sprout-objects 1 [
       set color white
       set shape "circle"
       set size 4
-      set patch-type 3
+      set patch-type 4
     ]
   ]
-
-  ;;THE TURTLES CAN STILL MOVE OVER THE CYLINDERS, I WILL TRY TO FIX THAT LATER
+  ask patches with [(distancexy -2.5 -8 < 2.5) or (distancexy 2.5 -8 < 2.5)] [
+    set patch-type 4
+  ]
 
 end
 
 
-;;
-;; repeat speed[
-;; set next-patch min-one-of neighbors [[distance myself] of patch 0 -13]
-;; next-patch [ move-to next-patch ]]
 to go
-  set speed (panic / 10)
-  ask turtles with [size = 0.8] [
-    bounce
-    ifelse patch-type = 0 [ ;; if still inside, do this
-      ifelse not any? other turtles in-radius (0.8) [
-        fd speed
-        if [patch-type] of patch-ahead speed = 5 and room = "1-room-1-exit" [ ; was 0.1
-          set heading 180
-          fd (speed + 0.1) ;; if not +0.1, it does not enter the exit
-          set color green
+  ;; let humans face the exit, or their groupmembers
+  ifelse groups [
+    ;; decide on new leader (the one closest to exit), and let the leader face the exit
+    ask humans with [group > -1] [
+      set leader 0
+    ]
+    let i 0
+    repeat (number-of-groups) [
+      if any? humans with [group = i] [
+        ask min-one-of humans with [group = i] [distance (patch 0 -13)] [
+          set leader 1
+          face patch 0 -13
+        ]
+      ]
+      set i (i + 1)
+    ]
+    ;; let rest of humans face their leader
+    ask humans with [leader = 0] [
+      ifelse (any? patches in-radius 3 with [patch-type = 3]) [
+        face patch 0 -13
+      ] [
+        let groupleader 0
+        ask one-of humans with [group = [group] of myself and leader = 1] [
+          set groupleader self
+        ]
+        if groupleader != 0 [
+          set heading towards groupleader
+        ]
+      ]
+    ]
+  ] [
+    ;; head towards exit
+    ask humans [
+      if patch-type = 0 [
+        face patch 0 -13
+      ]
+    ]
+  ]
+
+  ;; let humans move with specified desired speed/panic
+  repeat (panic) [
+    ask humans [
+      ;; if human is outside
+      if patch-type = 1 [
+        kill?
+        ifelse not any? other humans-on patch-ahead (0.1) and [patch-type] of patch-ahead 0.1 = 1 [
+          fd 0.1 ;; move towards edge
+        ]
+        [
+          set heading (heading + (-10 + random 20)) ;; avoid obstacle
+        ]
+      ]
+
+      ;; if human is in exit
+      if patch-type = 3 [
+        set heading 180
+        fd 0.1
+        set color green
+        ;; if human is outside, it should not influence the heading of the other groupmembers anymore
+        set group -1
+        set leader -1
+      ]
+
+      if patch-type = 4 [
+        move-around-object
+      ]
+
+      ;; if human is still inside
+      if patch-type = 0 [
+        ifelse [patch-type] of patch-ahead 0.1 = 0 [ ;; if next patch also inside
+          ifelse check-for-humans [
+            move-if-group-is-close
+          ]
+          [
+            let neighbor-group -1
+            ask humans-on patch-ahead 0.8  [
+              set neighbor-group group
+            ]
+            if (neighbor-group != group) [
+              set heading heading + 45
+              ifelse check-for-humans and ([patch-type] of patch-ahead 0.1 = 0) [
+                fd 0.1
+              ] [
+                set heading heading - 90
+                if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0) [
+                  fd 0.1
+                ]
+              ]
+            ]
+            head-towards-better-patch-or-stay
+          ]
+        ]
+        [
+          ifelse [patch-type] of patch-ahead 0.1 = 2 [ ;; if next patch is wall
+            set heading (heading + (random 360)) ;; change direction
+            if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0 or [patch-type] of patch-ahead 0.1 = 3) [
+              move-if-group-is-close
+            ]
+          ]
+          [
+            ifelse [patch-type] of patch-ahead 0.1 = 4 [ ;; if next patch is object
+              move-around-object
+            ]
+            [
+              ;next patch is type 3 and thus an exit
+              if check-for-humans [
+                move-if-group-is-close
+              ]
+            ]
+          ]
         ]
 
       ]
-      [ set heading (heading + 10)
-        fd speed ]
-      ;;use (heading + (-5 + random 10)) ] for new heading close to old heading, but this makes it perform worse
-
-      if any? patches in-radius 5 with [ patch-type = 5 ]  [
-        face patch 0 -18 ;; should be 0 -13, that is where exit is. But gives mistakes
-      ]
     ]
-    [ ;; if outside, move towards edge of environment
-      fd speed
-    ]
-
   ]
-  ask turtles with [size = 0.8] [ bounce ]
-  ask turtles with [size = 0.8] [ kill ]
+
+  ;; if all humans left room, stop
+  if not any? humans [ stop ]
   tick
 end
 
-to kill
-  if [pxcor] of patch-ahead (speed) = -21 or [pycor] of patch-ahead (speed) = -21 [ die ] ;; was 0.1 both
+to head-towards-better-patch-or-stay
+  ;; head towards a better patch
+  let better-patch patch-here
+  let dist distance (patch 0 -13)
+  ask patches in-radius 2 [ ;; 2 why
+    if (patch-type = 0 or patch-type = 3) and not any? humans-here and distance (patch 0 -13) < dist [
+      set better-patch (patch pxcor pycor)
+      set dist distance (patch 0 -13)
+    ]
+  ]
+  if not (better-patch = patch-here) [
+    ;; move to this patch if it is not the current patch
+    set heading towards better-patch
+    ;; only move if patch is free, if occupied wait in the queue
+    if check-for-humans and ([patch-type] of patch-ahead 0.1 = 0 or [patch-type] of patch-ahead 0.1 = 3) [
+      move-if-group-is-close
+    ]
+  ]
 end
 
-;; this procedure checks the coordinates and makes the turtles
-;; reflect according to the law that the angle of reflection is
-;; equal to the angle of incidence
-to bounce  ;; turtle procedure
-   if abs [pxcor] of patch-ahead speed = max-pxcor - 8
-     ; if so, reflect heading around x axis
-     [ set heading (- heading) ]
-   ; check: hitting top or bottom wall?
-   if abs [pycor] of patch-ahead speed = max-pycor - 8
-     ; if so, reflect heading around y axis
-     [ set heading (180 - heading) ]
+to move-around-object
+  ;; find a patch in radius 2 that is no object and has shortest distance to exit
+  let better-patch patch-here
+  let dist 100000
+  ask patches in-radius 2 [
+    if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
+      set better-patch (patch pxcor pycor)
+      set dist distance (patch 0 -13)
+    ]
+  ]
+  ;; move to this patch
+  set heading towards better-patch
+  ;; only move if patchis free, if occupied wait in the queue
+  if check-for-humans [
+    ;; to prevent congestions, it does not have to wait for its group here
+    fd 0.1
+  ]
+end
+
+to move-if-group-is-close
+    ifelse ((groups) and (any? other humans with [group = [group] of myself])
+         and (not (any? patches in-radius 4 with [patch-type = 3])) ;; 4 why
+         and (not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6))) [
+    ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [
+      fd 0.1 ;; move if all group members are close ;; if one of group members is close
+    ]
+    [
+      let save-heading heading
+      ;; move towards closest groupmember
+      set heading towards (min-one-of other humans with [group = [group] of myself] [distance myself])
+      ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+        ;; if possible move
+        fd 0.1
+      ] [
+        ;; otherwise try to wiggle around the thing in front
+        set heading heading + 45 ;; 45 why
+        if ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+          fd 0.1
+        ]
+        set heading heading - 90
+        ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+          fd 0.1
+        ]
+        [
+          ;; set heading back
+          set heading save-heading
+        ]
+      ]
+    ]
+  ] [
+    ;; if no groupmembers, or too close to exit, or in between 2 objects, human should go forward
+    fd 0.1
+  ]
+
+
+end
+
+to move-if-group-is-close2
+
+  ifelse ([patch-type] of patch-ahead 2 = 3)  [
+    ;; if the next patch is the patch before the exit, then only when the rest of the group is not too far away,
+    ;; try to move
+    let moved 0
+    ifelse distance (max-one-of humans with [group = [group] of myself] [distance myself]) < (group-size) [
+      fd 0.1 ;; move if all group members are close
+      set moved 1
+    ]
+    [
+      let save-heading heading
+      ;; move towards closest groupmember
+      set heading towards (min-one-of other humans with [group = [group] of myself] [distance myself])
+      ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+        ;; if possible move
+        fd 0.1
+      ] [
+        ;; otherwise try to wiggle around the thing in front
+        set heading heading - 45 + (random 90) ;; 45 why
+        ifelse ([patch-type] of patch-ahead 0.1 = 0 and check-for-humans) [
+          fd 0.1
+        ] [
+          ;; set heading back and just move away from group
+          set heading save-heading
+          fd 0.1
+        ]
+      ]
+    ]
+  ]
+  [
+     fd 0.1
+  ]
+end
+
+
+;; humans disappear when they reach the edge of the environment
+to kill?
+  if [pxcor] of patch-ahead (0.1) = -21 or [pycor] of patch-ahead (0.1) = -21 [
+    die
+  ]
+end
+
+;; check if another human blocks the step of the current human based on its size
+to-report check-for-humans
+ ifelse not any? other humans-on patch-ahead (0.1)
+            and not any? other humans-on patch-ahead (0.1 + 0.1)
+            and not any? other humans-on patch-ahead (0.1 + 0.2)
+            and not any? other humans-on patch-ahead (0.1 + 0.3)
+            and not any? other humans-on patch-ahead (0.1 + 0.4)
+            and not any? other humans-on patch-ahead (0.1 + 0.5)
+            and not any? other humans-on patch-ahead (0.1 + 0.6)
+            and not any? other humans-on patch-ahead (0.1 + 0.7)
+            and not any? other humans-on patch-ahead (0.1 + 0.8)
+  [
+    report true
+  ]
+  [
+    report false
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -281,7 +467,7 @@ number-of-humans
 number-of-humans
 0
 100
-95.0
+100.0
 1
 1
 NIL
@@ -289,9 +475,9 @@ HORIZONTAL
 
 BUTTON
 24
-153
+152
 87
-186
+185
 NIL
 setup
 NIL
@@ -311,8 +497,8 @@ CHOOSER
 126
 room
 room
-"1-room-1-exit" "2-rooms-1-exit" "triangular-object" "cylindrical-objects"
-2
+"1-room-1-exit" "cylindrical-objects"
+1
 
 BUTTON
 105
@@ -332,34 +518,80 @@ NIL
 1
 
 SLIDER
-18
-207
-207
-240
-individualistic-percentage
-individualistic-percentage
-0
-100
-73.0
+19
+210
+191
+243
+panic
+panic
+1
+10
+2.0
 1
 1
 NIL
 HORIZONTAL
 
+PLOT
+8
+365
+208
+515
+population
+ticks
+population
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count turtles"
+
 SLIDER
-16
-250
-188
-283
-panic
-panic
-1
-10
-1.0
+18
+306
+190
+339
+mean-group-size
+mean-group-size
+3
+8
+3.0
 1
 1
 NIL
 HORIZONTAL
+
+SWITCH
+53
+261
+156
+294
+groups
+groups
+0
+1
+-1000
+
+BUTTON
+355
+426
+455
+459
+NIL
+form-groups\n
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -707,6 +939,25 @@ NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count turtles</metric>
+    <enumeratedValueSet variable="room">
+      <value value="&quot;1-room-1-exit&quot;"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-humans">
+      <value value="62"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="individualistic-percentage">
+      <value value="0"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="panic">
+      <value value="8"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
