@@ -296,7 +296,7 @@ to head-towards-better-patch-or-stay
   ;; head towards a better patch
   let better-patch patch-here
   let dist distance (patch 0 -13)
-  ask patches in-radius 2 [ ;; 2 why
+  ask patches in-radius 2 [
     if (patch-type = 0 or patch-type = 3) and not any? humans-here and distance (patch 0 -13) < dist [
       set better-patch (patch pxcor pycor)
       set dist distance (patch 0 -13)
@@ -316,7 +316,7 @@ to move-around-object
   ;; find a patch in radius 2 that is no object and has shortest distance to exit
   let better-patch patch-here
   let dist 100000
-  ask patches in-radius 2 [ ;; 2 why
+  ask patches in-radius 2 [
     if patch-type = 0 and not any? humans-here and distance (patch 0 -13) < dist [
       set better-patch (patch pxcor pycor)
       set dist distance (patch 0 -13)
@@ -335,7 +335,7 @@ to move-if-group-is-close
     ifelse ((groups) and (any? other humans with [group = [group] of myself])
          and (not (any? patches in-radius 4 with [patch-type = 3])) ;; 4 why
          and (not (room = "cylindrical-objects" and (pxcor > -2 or pxcor < 2) and pycor < -6))) [
-    ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [ ;; 2.5 why
+    ifelse distance (min-one-of other humans with [group = [group] of myself] [distance myself]) < 2.5 [
       fd 0.1 ;; move if all group members are close ;; if one of group members is close
     ]
     [
